@@ -326,7 +326,13 @@ function formatTime(dt: string): string {
 
 //  Log detail panel
 
-function LogDetailPanel({ log, onClose }: { log: Log; onClose: () => void }) {
+export function LogDetailPanel({
+  log,
+  onClose,
+}: {
+  log: Log;
+  onClose: () => void;
+}) {
   let meta: unknown = null;
   if (log.metadata) {
     try {
@@ -337,7 +343,7 @@ function LogDetailPanel({ log, onClose }: { log: Log; onClose: () => void }) {
   }
 
   return (
-    <div className="fixed right-0 top-0 bottom-0 w-115 bg-(--bg-surface) border-l border-(--border) z-50 overflow-y-auto p-6">
+    <div className="fixed right-0 top-0 bottom-0 w-115 max-w-full bg-(--bg-surface) border-l border-(--border) z-50 overflow-y-auto p-6 animate-[slideInRight_0.22s_ease-out] motion-reduce:animate-none">
       <div className="flex justify-between items-center mb-5">
         <span className="font-semibold text-[14px]">Log Detail</span>
         <button

@@ -239,7 +239,7 @@ export function ServicesBarChart({
   if (byService.length === 0) return <Empty text="No services yet" />;
 
   const data = byService
-    .slice(0, 8)
+    .slice(0, 4)
     .map((s) => ({ name: s.service, count: s.count }));
 
   return (
@@ -294,7 +294,13 @@ function formatTime(dt: string): string {
   });
 }
 
-export function RecentErrorsList({ errors }: { errors: Log[] }) {
+export function RecentErrorsList({
+  errors,
+  onSelect,
+}: {
+  errors: Log[];
+  onSelect: (log: Log) => void;
+}) {
   if (errors.length === 0) {
     return (
       <Empty
@@ -308,14 +314,17 @@ export function RecentErrorsList({ errors }: { errors: Log[] }) {
     );
   }
   return (
-    <div className="flex flex-col divide-y divide-(--border)">
+    <div className="flex flex-col divide-y divide-(--border) flex-1 min-h-0 overflow-y-auto -mr-2 pr-2">
       {errors.map((log) => (
         <div key={log.id} className="flex items-center gap-2 py-2 min-w-0">
-          {log.service && (
-            <span className="text-[11px] text-(--accent) shrink-0 font-medium">
-              {log.service}
-            </span>
-          )}
+          <button
+            type="button"
+            onClick={() => onSelect(log)}
+            title="View log detail"
+            className="text-[11px] text-(--accent) shrink-0 font-medium bg-transparent border-none p-0 cursor-pointer hover:underline"
+          >
+            {log.service ?? "unknown"}
+          </button>
           <span className="text-[12px] text-foreground flex-1 overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
             {log.message}
           </span>

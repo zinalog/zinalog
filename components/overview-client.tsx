@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import StatCard from "@/components/stat-card";
 import LiveLogs from "@/components/live-logs";
+import { LogDetailPanel } from "@/components/log-table";
 import {
   ActivityChart,
   LevelPieChart,
@@ -24,6 +25,7 @@ export default function OverviewClient({ initialStats }: OverviewClientProps) {
   const [stats, setStats] = useState<Stats>(initialStats);
   const [logs, setLogs] = useState<Log[]>([]);
   const [connected, setConnected] = useState(false);
+  const [selectedLog, setSelectedLog] = useState<Log | null>(null);
 
   const refreshStats = useCallback(() => {
     fetch("/api/stats")
@@ -102,9 +104,9 @@ export default function OverviewClient({ initialStats }: OverviewClientProps) {
 
       {/* Main grid */}
       <div className="flex-1 min-h-0 grid grid-cols-[1fr_340px] gap-3">
-        {/* Left column - charts + recent errors */}
+        {/* Charts stay fixed; Recent Errors scrolls. */}
         <div className="flex flex-col gap-3 min-h-0 overflow-y-auto pr-0.5">
-          <CardShell title="Activity (last 24h)">
+          <CardShell title="Activity (last 24h)" className="shrink-0">
             <ActivityChart hourlyByLevel={stats.hourlyByLevel} />
           </CardShell>
 
@@ -117,8 +119,11 @@ export default function OverviewClient({ initialStats }: OverviewClientProps) {
             </CardShell>
           </div>
 
-          <CardShell title="Recent Errors">
-            <RecentErrorsList errors={stats.recentErrors} />
+          <CardShell title="Recent Errors" className="flex-1 min-h-45">
+            <RecentErrorsList
+              errors={stats.recentErrors}
+              onSelect={setSelectedLog}
+            />
           </CardShell>
         </div>
 
@@ -131,6 +136,19 @@ export default function OverviewClient({ initialStats }: OverviewClientProps) {
           />
         </div>
       </div>
+
+      {selectedLog && (
+        <>
+          <div
+            onClick={() => setSelectedLog(null)}
+            className="fixed inset-0 z-49"
+          />
+          <LogDetailPanel
+            log={selectedLog}
+            onClose={() => setSelectedLog(null)}
+          />
+        </>
+      )}
     </div>
   );
 }

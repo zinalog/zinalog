@@ -224,7 +224,7 @@ export async function getStats(allowedServices: string[] | null = null) {
      ${baseWhere ? `${baseWhere} AND service IS NOT NULL` : "WHERE service IS NOT NULL"}
      GROUP BY service
      ORDER BY count DESC
-     LIMIT 10`,
+     LIMIT 4`,
     baseParams
   )) as { service: string; count: number }[];
 
@@ -239,7 +239,7 @@ export async function getStats(allowedServices: string[] | null = null) {
     )?.c ?? 0;
 
   const recentErrors = (await database.all<Log[]>(
-    `SELECT * FROM logs ${recentWhere} ORDER BY created_at DESC LIMIT 5`,
+    `SELECT * FROM logs ${recentWhere} ORDER BY created_at DESC LIMIT 10`,
     recentParams
   )) as Log[];
 
