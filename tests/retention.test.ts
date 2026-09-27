@@ -9,7 +9,10 @@ const cjsRequire = createRequire(__filename);
 const compiledRetentionPath = path.resolve(__dirname, "../lib/retention.js");
 const compiledDbPath = path.resolve(__dirname, "../lib/db.js");
 
-function mockModule(modulePath: string, exports: Record<string, unknown>): void {
+function mockModule(
+  modulePath: string,
+  exports: Record<string, unknown>
+): void {
   cjsRequire.cache[modulePath] = {
     id: modulePath,
     path: path.dirname(modulePath),
