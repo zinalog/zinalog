@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateApiKey } from "@/lib/auth";
 import {
-  insertLog,
+  claimIssueAlert,
+  ingestLog,
   queryLogs,
+  type IssueEvent,
   getAllSettings,
   checkAndSetCooldown,
   countRecentLogs,
@@ -135,23 +137,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Optional client override for grouping; hashed with level and service
-  // before storage, so it only groups logs within the same service.
-  if (
-    fingerprint !== undefined &&
-    fingerprint !== null &&
-    (typeof fingerprint !== "string" ||
-      fingerprint.trim() === "" ||
-      fingerprint.length > MAX_CLIENT_FINGERPRINT_LENGTH)
-  ) {
-    return NextResponse.json(
-      {
-        error: `Field 'fingerprint' must be a non-empty string of at most ${MAX_CLIENT_FINGERPRINT_LENGTH} characters`,
-      },
-      { status: 400, headers: CORS_HEADERS }
-    );
-  }
-
   const metadataJson = metadata !== undefined ? JSON.stringify(metadata) : null;
   if (metadataJson && exceedsByteLength(metadataJson, MAX_METADATA_BYTES)) {
     return NextResponse.json(
@@ -170,22 +155,32 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Optional client override for grouping. It's only a hint, so a malformed
+  // value falls back to automatic grouping rather than rejecting the log.
+  const trimmedFingerprint =
+    typeof fingerprint === "string" ? fingerprint.trim() : "";
+  const clientFingerprint =
+    trimmedFingerprint !== "" &&
+    trimmedFingerprint.length <= MAX_CLIENT_FINGERPRINT_LENGTH
+      ? trimmedFingerprint
+      : null;
+
   // Respect service restriction on the API key
   const effectiveService =
     auth.apiKey?.service ?? (typeof service === "string" ? service : null);
 
-  await insertLog({
+  const { issue } = await ingestLog({
     level: normalizedLevel,
     message,
     service: effectiveService ?? null,
     stack: typeof stack === "string" ? stack : null,
     metadata: metadataJson,
     api_key_id: auth.apiKey?.id ?? null,
-    fingerprint: typeof fingerprint === "string" ? fingerprint.trim() : null,
+    fingerprint: clientFingerprint,
   });
 
   // Fire-and-forget alert check
-  void triggerAlertIfNeeded({
+  void triggerAlertIfNeeded(issue, {
     level: normalizedLevel,
     message,
     service: effectiveService ?? null,
@@ -197,14 +192,19 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ status: "logged" }, { headers: CORS_HEADERS });
 }
 
-async function triggerAlertIfNeeded(log: {
-  level: string;
-  message: string;
-  service: string | null;
-  stack: string | null;
-  metadata: string | null;
-  created_at: string;
-}) {
+async function triggerAlertIfNeeded(
+  issue: IssueEvent,
+  log: {
+    level: string;
+    message: string;
+    service: string | null;
+    stack: string | null;
+    metadata: string | null;
+    created_at: string;
+  }
+) {
+  if (issue.status === "ignored") return;
+
   const s = await getAllSettings();
   const alertLevels = (s.alert_levels ?? "error")
     .split(",")
@@ -213,6 +213,25 @@ async function triggerAlertIfNeeded(log: {
 
   const threshold = parseInt(s.alert_threshold ?? "1", 10);
   const cooldown = parseInt(s.alert_cooldown ?? "15", 10);
+
+  // New and regressed issues alert straight away: they skip the volume
+  // threshold and the per-service cooldown (a noisy known error mustn't mask
+  // a new one), and use a per-issue cooldown instead.
+  const reason = issue.isNew
+    ? "new_issue"
+    : issue.isRegression
+      ? "regression"
+      : null;
+  if (reason) {
+    if (!(await claimIssueAlert(issue.id, cooldown))) return;
+    sendAllNotifications({
+      ...log,
+      alert_reason: reason,
+      issue_id: issue.id,
+    }).catch((err) => console.error("[alert]", err));
+    return;
+  }
+
   const service = log.service ?? "__global__";
 
   const recentCount = await countRecentLogs(log.level, log.service, cooldown);
@@ -220,7 +239,9 @@ async function triggerAlertIfNeeded(log: {
 
   if (!(await checkAndSetCooldown(service, log.level, cooldown))) return;
 
-  sendAllNotifications(log).catch((err) => console.error("[alert]", err));
+  sendAllNotifications({ ...log, issue_id: issue.id }).catch((err) =>
+    console.error("[alert]", err)
+  );
 }
 
 export async function GET(req: NextRequest) {
