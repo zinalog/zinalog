@@ -28,7 +28,8 @@
     "lib/monitors/validation.ts",
     "lib/monitors/checks.ts",
     "lib/monitors/scheduler.ts",
-    "lib/notifications.ts"
+    "lib/notifications.ts",
+    "lib/announcements.ts"
   ],
   "exclude": ["node_modules", ".next", ".test-dist"]
 }
