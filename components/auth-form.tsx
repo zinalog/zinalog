@@ -194,7 +194,7 @@ export default function AuthForm({ mode }: { mode: "login" | "setup" }) {
 
             <div className="animate-slide-up mt-5 rounded-2xl border border-(--border) bg-(--bg-surface) p-3 shadow-[0_20px_60px_rgba(0,0,0,0.28)]">
               <Image
-                src="/dashboard2.png"
+                src="/dashboard.png"
                 alt="ZinaLog monitor detail view with uptime stats and response time chart"
                 width={1896}
                 height={697}
