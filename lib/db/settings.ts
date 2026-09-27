@@ -79,6 +79,10 @@ async function parsePositiveSetting(
   return Math.floor(parsedValue);
 }
 
+export async function isAnnouncementsEnabled(): Promise<boolean> {
+  return (await getSetting("announcements_enabled")) !== "0";
+}
+
 export async function isAccessAuditEnabled(): Promise<boolean> {
   return (await getSetting("access_audit_enabled")) !== "0";
 }

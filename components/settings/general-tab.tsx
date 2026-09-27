@@ -1,7 +1,7 @@
 "use client";
 
-import { Database, Server, Settings } from "lucide-react";
-import { Field, inputClass, SaveBar, SectionHeader } from "./shared";
+import { Bell, Database, Server, Settings } from "lucide-react";
+import { Field, inputClass, SaveBar, SectionHeader, Toggle } from "./shared";
 import type { GeneralSettings } from "./types";
 
 // One labelled row of the General card: title and description on the left,
@@ -89,7 +89,7 @@ export default function GeneralTab({
       <SectionHeader
         icon={<Settings size={15} />}
         title="General"
-        description="Session, log retention and runtime details for this zinalog instance."
+        description="Session, log retention, notifications and runtime details for this zinalog instance."
       />
 
       <SettingsRow
@@ -151,6 +151,28 @@ export default function GeneralTab({
               }
             />
           </Field>
+        </div>
+      </SettingsRow>
+
+      <SettingsRow
+        icon={<Bell size={13} />}
+        title="Project Notifications"
+        description="Announcements from the zinalog project, such as new releases and security notices."
+      >
+        <div className="flex items-center justify-between gap-4 max-w-90">
+          <p className="text-[11px] text-(--text-dim) leading-normal m-0">
+            When disabled, zinalog stops checking for announcements and hides
+            the bell in the sidebar for all users.
+          </p>
+          <Toggle
+            value={general.announcements_enabled !== "0"}
+            onChange={(on) =>
+              setGeneral((s) => ({
+                ...s,
+                announcements_enabled: on ? "1" : "0",
+              }))
+            }
+          />
         </div>
       </SettingsRow>
 

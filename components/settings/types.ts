@@ -2,6 +2,7 @@ export interface GeneralSettings {
   retention_days: string;
   max_logs: string;
   session_idle_timeout_minutes: string;
+  announcements_enabled: string;
 }
 
 export interface AllSettings {

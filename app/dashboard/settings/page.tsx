@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { AlertTriangle, Bell, ChevronRight, Settings } from "lucide-react";
 import DangerTab from "@/components/settings/danger-tab";
 import GeneralTab from "@/components/settings/general-tab";
+import { ANNOUNCEMENTS_REFRESH_EVENT } from "@/components/announcements-bell";
 import NotificationsTab from "@/components/settings/notifications-tab";
 import type {
   AllSettings,
@@ -25,6 +26,7 @@ export default function SettingsPage() {
     retention_days: "30",
     max_logs: "100000",
     session_idle_timeout_minutes: "30",
+    announcements_enabled: "1",
   });
   const [settings, setSettingsState] = useState<AllSettings>({
     email_provider: "disabled",
@@ -87,6 +89,8 @@ export default function SettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(general),
     });
+    // Let the sidebar bell pick up an on/off change without a reload.
+    window.dispatchEvent(new Event(ANNOUNCEMENTS_REFRESH_EVENT));
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);

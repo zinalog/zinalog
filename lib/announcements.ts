@@ -235,8 +235,6 @@ async function fetchFeed(): Promise<unknown> {
 export async function getAnnouncements(
   appVersion: string
 ): Promise<Announcement[]> {
-  if (process.env.ZINALOG_DISABLE_ANNOUNCEMENTS === "true") return [];
-
   let data: unknown;
   if (cache && cache.expiresAt > Date.now()) {
     data = cache.data;

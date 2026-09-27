@@ -70,6 +70,7 @@ export {
   getSessionIdleTimeoutMinutes,
   getSetting,
   isAccessAuditEnabled,
+  isAnnouncementsEnabled,
   setSetting,
   setSettings,
 } from "./db/settings";

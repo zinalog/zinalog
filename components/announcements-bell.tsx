@@ -15,6 +15,8 @@ import type { Announcement, AnnouncementType } from "@/lib/announcements";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 const SEEN_KEY = "zinalog:announcements:seen";
+// Dispatched on window after settings change, so the bell reloads at once.
+export const ANNOUNCEMENTS_REFRESH_EVENT = "zinalog:announcements:refresh";
 
 const TYPE_STYLES: Record<
   AnnouncementType,
@@ -60,6 +62,8 @@ function formatDate(iso: string): string {
 }
 
 export default function AnnouncementsBell() {
+  // Hidden until the first load says announcements are turned on.
+  const [enabled, setEnabled] = useState(false);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [seen, setSeen] = useState<Set<string>>(new Set());
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -71,19 +75,27 @@ export default function AnnouncementsBell() {
     const load = () =>
       fetch("/api/announcements")
         .then((res) => (res.ok ? res.json() : null))
-        .then((data: { announcements?: Announcement[] } | null) => {
-          if (cancelled || !data) return;
-          setSeen(readIds(SEEN_KEY));
-          setAnnouncements(data.announcements ?? []);
-        })
+        .then(
+          (
+            data: { enabled?: boolean; announcements?: Announcement[] } | null
+          ) => {
+            if (cancelled || !data) return;
+            setSeen(readIds(SEEN_KEY));
+            setEnabled(data.enabled !== false);
+            setAnnouncements(data.announcements ?? []);
+            if (data.enabled === false) setOpen(false);
+          }
+        )
         // Announcements are optional; never surface fetch errors.
         .catch(() => {});
 
     load();
     const timer = setInterval(load, POLL_INTERVAL_MS);
+    window.addEventListener(ANNOUNCEMENTS_REFRESH_EVENT, load);
     return () => {
       cancelled = true;
       clearInterval(timer);
+      window.removeEventListener(ANNOUNCEMENTS_REFRESH_EVENT, load);
     };
   }, []);
 
@@ -138,6 +150,8 @@ export default function AnnouncementsBell() {
       })
       .catch(restore);
   };
+
+  if (!enabled) return null;
 
   return (
     // The panel positions against the nearest positioned ancestor (the

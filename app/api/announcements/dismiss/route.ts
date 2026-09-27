@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAnnouncements } from "@/lib/announcements";
-import { dismissAnnouncement } from "@/lib/db";
+import { dismissAnnouncement, isAnnouncementsEnabled } from "@/lib/db";
 import { requireApiUser } from "@/lib/session-auth";
 import { APP_VERSION } from "@/lib/version";
 
@@ -19,7 +19,9 @@ export async function POST(req: NextRequest) {
 
   // Only record dismissals for announcements that are currently live and
   // dismissible, so the table can't be filled with arbitrary ids.
-  const announcements = await getAnnouncements(APP_VERSION);
+  const announcements = (await isAnnouncementsEnabled())
+    ? await getAnnouncements(APP_VERSION)
+    : [];
   const announcement = announcements.find((a) => a.id === id);
   if (!announcement) {
     return NextResponse.json(

@@ -29,6 +29,8 @@ export async function GET() {
     max_logs: (await getSetting("max_logs")) ?? "100000",
     session_idle_timeout_minutes:
       (await getSetting("session_idle_timeout_minutes")) ?? "30",
+    announcements_enabled:
+      (await getSetting("announcements_enabled")) === "0" ? "0" : "1",
   });
 }
 
@@ -100,6 +102,17 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+  }
+
+  if (body.announcements_enabled !== undefined) {
+    const value = body.announcements_enabled;
+    if (value !== "0" && value !== "1") {
+      return NextResponse.json(
+        { error: "Field 'announcements_enabled' must be '0' or '1'" },
+        { status: 400 }
+      );
+    }
+    await setSetting("announcements_enabled", value);
   }
 
   return NextResponse.json({ status: "updated", trimmed });

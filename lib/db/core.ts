@@ -431,6 +431,7 @@ async function createDb(): Promise<SqliteDatabase> {
     ["retention_days", "30"],
     ["max_logs", "100000"],
     ["session_idle_timeout_minutes", "30"],
+    ["announcements_enabled", "1"],
     ["access_audit_enabled", "1"],
     ["access_audit_retention_days", "30"],
     ["email_provider", "disabled"],
