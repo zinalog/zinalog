@@ -40,9 +40,9 @@ export default async function LogGroupPage({
     <div className="flex flex-col gap-5">
       {/* Header */}
       <div>
-        <h1 className="text-[22px] font-bold mb-1">{label} Groups</h1>
+        <h1 className="text-[22px] font-bold mb-1">{label} Logs</h1>
         <p className="text-[13px] text-(--text-muted)">
-          Similar {label.toLowerCase()} logs grouped by message and service
+          Grouped similar {label.toLowerCase()} logs by message and service
         </p>
       </div>
 
@@ -69,7 +69,7 @@ export default async function LogGroupPage({
         </div>
       </div>
 
-      {/* Groups list */}
+      {/* Logs list */}
       {groups.length === 0 ? (
         <div className="flex flex-col items-center justify-center px-5 py-15 bg-(--bg-card) border border-(--border) rounded-[10px] text-(--text-dim)">
           <Icon size={32} className="mb-3 opacity-40" />

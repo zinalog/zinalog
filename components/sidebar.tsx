@@ -16,7 +16,6 @@ import {
   Activity,
   Menu,
   X,
-  Layers,
   ChevronDown,
   Users,
   LogOut,
@@ -28,31 +27,33 @@ import type { SessionUser } from "@/lib/session-auth";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/logs", label: "Logs", icon: ScrollText },
+];
+
+const secondaryNavItems = [
   { href: "/dashboard/monitors", label: "Monitors", icon: Globe },
 ];
 
-const groupItems = [
+const logItems = [
   {
-    href: "/dashboard/groups/errors",
+    href: "/dashboard/logs/errors",
     label: "Errors",
     icon: AlertTriangle,
     color: "var(--error)",
   },
   {
-    href: "/dashboard/groups/warn",
+    href: "/dashboard/logs/warn",
     label: "Warnings",
     icon: TriangleAlert,
     color: "var(--warning)",
   },
   {
-    href: "/dashboard/groups/info",
+    href: "/dashboard/logs/info",
     label: "Info",
     icon: Info,
     color: "var(--accent)",
   },
   {
-    href: "/dashboard/groups/debug",
+    href: "/dashboard/logs/debug",
     label: "Debug",
     icon: Bug,
     color: "var(--debug)",
@@ -108,12 +109,12 @@ function NavLinks({
       : []),
   ];
 
-  const groupsActive = pathname.startsWith("/dashboard/groups");
+  const logsActive = pathname.startsWith("/dashboard/logs");
   const adminActive =
     canSeeAdministrative && adminItems.some(({ href }) => isActive(href));
-  const [groupsPinnedOpen, setGroupsPinnedOpen] = useState(false);
+  const [logsPinnedOpen, setLogsPinnedOpen] = useState(false);
   const [adminPinnedOpen, setAdminPinnedOpen] = useState(false);
-  const groupsOpen = groupsActive || groupsPinnedOpen;
+  const logsOpen = logsActive || logsPinnedOpen;
   const adminOpen = adminActive || adminPinnedOpen;
 
   return (
@@ -137,30 +138,43 @@ function NavLinks({
         );
       })}
 
-      {/* Groups collapsible section */}
+      {/* Logs collapsible section */}
       <button
         onClick={() => {
-          if (!groupsActive) {
-            setGroupsPinnedOpen((open) => !open);
+          if (!logsActive) {
+            setLogsPinnedOpen((open) => !open);
           }
         }}
         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-md mb-0.5 w-full border-none cursor-pointer text-[13px] text-left transition-all duration-150 ${
-          groupsActive
+          logsActive
             ? "font-semibold text-(--accent) bg-[rgba(88,166,255,0.1)]"
             : "font-normal text-(--text-muted) bg-transparent"
         }`}
       >
-        <Layers size={16} />
-        <span className="flex-1">Groups</span>
+        <ScrollText size={16} />
+        <span className="flex-1">Logs</span>
         <ChevronDown
           size={14}
-          className={`transition-transform duration-200 opacity-60 ${groupsOpen ? "rotate-180" : "rotate-0"}`}
+          className={`transition-transform duration-200 opacity-60 ${logsOpen ? "rotate-180" : "rotate-0"}`}
         />
       </button>
 
-      {groupsOpen && (
+      {logsOpen && (
         <div className="pl-3.5 mb-0.5">
-          {groupItems.map(({ href, label, icon: Icon, color }) => {
+          <Link
+            href="/dashboard/logs"
+            onClick={onNavigate}
+            className={`flex items-center gap-2.25 px-3 py-2 rounded-md mb-px no-underline text-[12px] transition-all duration-150 ${
+              pathname === "/dashboard/logs"
+                ? "font-semibold text-(--accent)"
+                : "font-normal text-(--text-muted)"
+            }`}
+          >
+            <ScrollText size={14} />
+            All Logs
+          </Link>
+
+          {logItems.map(({ href, label, icon: Icon, color }) => {
             const active = pathname === href;
             return (
               <Link
@@ -187,6 +201,24 @@ function NavLinks({
         </div>
       )}
 
+      {secondaryNavItems.map(({ href, label, icon: Icon }) => {
+        const active = isActive(href);
+        return (
+          <Link
+            key={href}
+            href={href}
+            onClick={onNavigate}
+            className={`flex items-center gap-2.5 px-3 py-2.5 rounded-md mb-0.5 no-underline text-[13px] transition-all duration-150 ${
+              active
+                ? "font-semibold text-(--accent) bg-[rgba(88,166,255,0.1)]"
+                : "font-normal text-(--text-muted) bg-transparent"
+            }`}
+          >
+            <Icon size={16} />
+            {label}
+          </Link>
+        );
+      })}
       {canSeeAdministrative && (
         <>
           <button
