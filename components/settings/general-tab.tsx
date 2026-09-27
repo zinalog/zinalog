@@ -1,7 +1,7 @@
 "use client";
 
 import { Database, Server, Settings } from "lucide-react";
-import { Field, inputBase, SaveBar, SectionHeader } from "./shared";
+import { Field, inputClass, SaveBar, SectionHeader } from "./shared";
 import type { GeneralSettings } from "./types";
 
 // One labelled row of the General card: title and description on the left,
@@ -51,7 +51,7 @@ function NumberInput({
         min={min}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        style={{ ...inputBase, paddingRight: unit ? 64 : 12 }}
+        className={`${inputClass} ${unit ? "pr-16" : ""}`}
       />
       {unit && (
         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-(--text-dim) pointer-events-none">

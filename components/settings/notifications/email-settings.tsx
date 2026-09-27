@@ -30,65 +30,32 @@ export default function EmailSettings({
   sendTest: (channel: NotifChannel) => void;
 }) {
   return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 10,
-        padding: "22px 24px",
-      }}
-    >
+    <div className="bg-(--bg-card) border border-(--border) rounded-[10px] px-6 py-5.5">
       <SectionHeader
         icon={<Mail size={15} />}
         title="Email Alerts"
         description="Send alert emails via SMTP or Resend when log thresholds are exceeded."
       />
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3,1fr)",
-          gap: 10,
-        }}
-      >
+      <div className="grid grid-cols-3 gap-2.5">
         {(["disabled", "smtp", "resend"] as const).map((p) => {
           const active = settings.email_provider === p;
           return (
             <button
               key={p}
               onClick={() => set("email_provider", p)}
-              style={{
-                padding: "12px 10px",
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: active ? 600 : 400,
-                cursor: "pointer",
-                border: active
-                  ? "1px solid var(--accent)"
-                  : "1px solid var(--border)",
-                background: active
-                  ? "rgba(88,166,255,0.08)"
-                  : "var(--bg-surface)",
-                color: active ? "var(--accent)" : "var(--text-muted)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 8,
-                transition: "all 0.15s",
-              }}
+              className={`px-2.5 py-3 rounded-lg text-[13px] cursor-pointer border flex flex-col items-center gap-2 transition-all duration-150 ${
+                active
+                  ? "font-semibold border-(--accent) bg-[rgba(88,166,255,0.08)] text-(--accent)"
+                  : "font-normal border-(--border) bg-(--bg-surface) text-(--text-muted)"
+              }`}
             >
               <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 6,
-                  background: active
-                    ? "rgba(88,166,255,0.15)"
-                    : "rgba(255,255,255,0.04)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                className={`w-7 h-7 rounded-md flex items-center justify-center ${
+                  active
+                    ? "bg-[rgba(88,166,255,0.15)]"
+                    : "bg-[rgba(255,255,255,0.04)]"
+                }`}
               >
                 {p === "disabled" ? (
                   <XCircle size={14} />
@@ -105,21 +72,9 @@ export default function EmailSettings({
       </div>
 
       {settings.email_provider !== "disabled" && (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 14,
-          }}
-        >
-          <div style={{ height: 1, background: "var(--border)" }} />
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 14,
-            }}
-          >
+        <div className="flex flex-col gap-3.5">
+          <div className="h-px bg-(--border)" />
+          <div className="grid grid-cols-2 gap-3.5">
             <Field label="From address" required>
               <input
                 type="email"
@@ -141,13 +96,7 @@ export default function EmailSettings({
           </div>
           {settings.email_provider === "smtp" && (
             <>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 90px",
-                  gap: 14,
-                }}
-              >
+              <div className="grid grid-cols-[1fr_90px] gap-3.5">
                 <Field label="SMTP host" required>
                   <input
                     type="text"
@@ -166,13 +115,7 @@ export default function EmailSettings({
                   />
                 </Field>
               </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 14,
-                }}
-              >
+              <div className="grid grid-cols-2 gap-3.5">
                 <Field label="Username" hint="Leave blank if no auth">
                   <input
                     type="text"
@@ -191,17 +134,7 @@ export default function EmailSettings({
                   />
                 </Field>
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "10px 14px",
-                  background: "var(--bg-surface)",
-                  borderRadius: 8,
-                  border: "1px solid var(--border)",
-                }}
-              >
+              <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-(--bg-surface) rounded-lg border border-(--border)">
                 <input
                   id="smtp-tls"
                   type="checkbox"
@@ -209,31 +142,15 @@ export default function EmailSettings({
                   onChange={(e) =>
                     set("smtp_secure", e.target.checked ? "1" : "0")
                   }
-                  style={{
-                    accentColor: "var(--accent)",
-                    width: 15,
-                    height: 15,
-                    cursor: "pointer",
-                  }}
+                  className="accent-(--accent) w-3.75 h-3.75 cursor-pointer"
                 />
                 <label
                   htmlFor="smtp-tls"
-                  style={{
-                    fontSize: 13,
-                    color: "var(--text-muted)",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
+                  className="text-[13px] text-(--text-muted) cursor-pointer select-none"
                 >
                   Use TLS / Secure connection
                 </label>
-                <span
-                  style={{
-                    marginLeft: "auto",
-                    fontSize: 11,
-                    color: "var(--text-dim)",
-                  }}
-                >
+                <span className="ml-auto text-[11px] text-(--text-dim)">
                   Recommended for port 465
                 </span>
               </div>

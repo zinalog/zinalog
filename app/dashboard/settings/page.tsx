@@ -122,122 +122,56 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: 300,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 12,
-            color: "var(--text-dim)",
-          }}
-        >
-          <div
-            style={{
-              width: 28,
-              height: 28,
-              border: "2px solid var(--border)",
-              borderTopColor: "var(--accent)",
-              borderRadius: "50%",
-              animation: "spin 0.7s linear infinite",
-            }}
-          />
-          <span style={{ fontSize: 13 }}>Loading settings…</span>
+      <div className="flex items-center justify-center h-75">
+        <div className="flex flex-col items-center gap-3 text-(--text-dim)">
+          <div className="w-7 h-7 border-2 border-(--border) border-t-(--accent) rounded-full animate-[spin_0.7s_linear_infinite]" />
+          <span className="text-[13px]">Loading settings…</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column" }}>
+    <div className="flex flex-col">
       {/* Page Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1
-          style={{
-            fontSize: 20,
-            fontWeight: 700,
-            color: "var(--text-base)",
-            margin: "0 0 4px",
-          }}
-        >
+      <div className="mb-7">
+        <h1 className="text-[20px] font-bold text-foreground mt-0 mx-0 mb-1">
           Settings
         </h1>
-        <p style={{ fontSize: 13, color: "var(--text-dim)", margin: 0 }}>
+        <p className="text-[13px] text-(--text-dim) m-0">
           Manage session behavior, log retention, notification channels, and
           system configuration
         </p>
       </div>
 
-      <div
-        className="settings-layout"
-        style={{ display: "flex", gap: 24, alignItems: "flex-start" }}
-      >
+      <div className="settings-layout flex gap-6 items-start">
         {/* Left Nav */}
-        <nav
-          className="settings-nav"
-          style={{
-            width: 200,
-            flexShrink: 0,
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 10,
-            overflow: "hidden",
-          }}
-        >
-          {NAV.map((item, i) => {
+        <nav className="settings-nav w-50 shrink-0 bg-(--bg-card) border border-(--border) rounded-[10px] overflow-hidden">
+          {NAV.map((item) => {
             const active = activeTab === item.id;
             const isDanger = item.id === "danger";
             return (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  padding: "11px 14px",
-                  background: active
+                className={`w-full flex items-center gap-2.5 px-3.5 py-2.75 border-0 border-b border-l-2 border-(--border) last:border-b-0 cursor-pointer text-[13px] text-left transition-all duration-150 box-border ${
+                  active
                     ? isDanger
-                      ? "rgba(248,81,73,0.08)"
-                      : "rgba(88,166,255,0.08)"
-                    : "transparent",
-                  border: "none",
-                  borderBottom:
-                    i < NAV.length - 1 ? "1px solid var(--border)" : "none",
-                  borderLeft: active
-                    ? `2px solid ${isDanger ? "var(--error)" : "var(--accent)"}`
-                    : "2px solid transparent",
-                  cursor: "pointer",
-                  fontSize: 13,
-                  fontWeight: active ? 600 : 400,
-                  color: active
-                    ? isDanger
-                      ? "var(--error)"
-                      : "var(--accent)"
-                    : "var(--text-muted)",
-                  textAlign: "left",
-                  transition: "all 0.15s",
-                  boxSizing: "border-box",
-                }}
+                      ? "bg-[rgba(248,81,73,0.08)] border-l-(--error) font-semibold text-(--error)"
+                      : "bg-[rgba(88,166,255,0.08)] border-l-(--accent) font-semibold text-(--accent)"
+                    : "bg-transparent border-l-transparent font-normal text-(--text-muted)"
+                }`}
               >
                 {item.icon}
-                <span style={{ flex: 1 }}>{item.label}</span>
-                {active && <ChevronRight size={12} style={{ opacity: 0.5 }} />}
+                <span className="flex-1">{item.label}</span>
+                {active && <ChevronRight size={12} className="opacity-50" />}
               </button>
             );
           })}
         </nav>
 
         {/* Content */}
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex-1 min-w-0">
           {activeTab === "general" && (
             <GeneralTab
               general={general}

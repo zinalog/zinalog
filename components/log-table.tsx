@@ -175,80 +175,37 @@ function DateRangePicker({
   })();
 
   return (
-    <div ref={ref} style={{ position: "relative" }}>
+    <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 7,
-          background: hasFilter ? "rgba(88,166,255,0.1)" : "var(--bg-card)",
-          border: hasFilter
-            ? "1px solid rgba(88,166,255,0.4)"
-            : "1px solid var(--border)",
-          borderRadius: 6,
-          padding: "7px 10px",
-          fontSize: 13,
-          color: hasFilter ? "var(--accent)" : "var(--text-muted)",
-          cursor: "pointer",
-          whiteSpace: "nowrap",
-        }}
+        className={`flex items-center gap-1.75 border rounded-md px-2.5 py-1.75 text-[13px] cursor-pointer whitespace-nowrap ${
+          hasFilter
+            ? "bg-[rgba(88,166,255,0.1)] border-[rgba(88,166,255,0.4)] text-(--accent)"
+            : "bg-(--bg-card) border-(--border) text-(--text-muted)"
+        }`}
       >
         <Calendar size={13} />
-        <span
-          style={{
-            maxWidth: 180,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {label}
-        </span>
+        <span className="max-w-45 overflow-hidden text-ellipsis">{label}</span>
         {hasFilter ? (
-          <X
-            size={12}
-            onClick={clear}
-            style={{ marginLeft: 2, opacity: 0.7 }}
-          />
+          <X size={12} onClick={clear} className="ml-0.5 opacity-70" />
         ) : (
-          <ChevronDown size={12} style={{ opacity: 0.5 }} />
+          <ChevronDown size={12} className="opacity-50" />
         )}
       </button>
 
       {open && (
         <div className="absolute top-[calc(100%+6px)] left-0 z-100 bg-(--bg-card) border border-(--border) rounded-[10px] p-4 min-w-75 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
           {/* Preset pills */}
-          <div
-            style={{
-              display: "flex",
-              gap: 6,
-              flexWrap: "wrap",
-              marginBottom: 14,
-            }}
-          >
+          <div className="flex gap-1.5 flex-wrap mb-3.5">
             {PRESETS.map((p) => (
               <button
                 key={p.id}
                 onClick={() => applyPreset(p.id)}
-                style={{
-                  padding: "5px 12px",
-                  borderRadius: 5,
-                  fontSize: 12,
-                  cursor: "pointer",
-                  border:
-                    activePreset === p.id
-                      ? "1px solid var(--accent)"
-                      : "1px solid var(--border)",
-                  background:
-                    activePreset === p.id
-                      ? "rgba(88,166,255,0.12)"
-                      : "var(--bg-surface)",
-                  color:
-                    activePreset === p.id
-                      ? "var(--accent)"
-                      : "var(--text-muted)",
-                  transition: "all 0.12s",
-                }}
+                className={`px-3 py-1.25 rounded-[5px] text-[12px] cursor-pointer border transition-all duration-120 ${
+                  activePreset === p.id
+                    ? "border-(--accent) bg-[rgba(88,166,255,0.12)] text-(--accent)"
+                    : "border-(--border) bg-(--bg-surface) text-(--text-muted)"
+                }`}
               >
                 {p.label}
               </button>
@@ -256,17 +213,9 @@ function DateRangePicker({
           </div>
 
           {/* Custom inputs */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="flex flex-col gap-2.5">
             <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--text-dim)",
-                  marginBottom: 5,
-                }}
-              >
-                From
-              </div>
+              <div className="text-[11px] text-(--text-dim) mb-1.25">From</div>
               <input
                 type="datetime-local"
                 value={localFrom}
@@ -278,15 +227,7 @@ function DateRangePicker({
               />
             </div>
             <div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--text-dim)",
-                  marginBottom: 5,
-                }}
-              >
-                To
-              </div>
+              <div className="text-[11px] text-(--text-dim) mb-1.25">To</div>
               <input
                 type="datetime-local"
                 value={localTo}
@@ -448,14 +389,7 @@ export default function LogTable({
   const hasDateFilter = !!(filters.from || filters.to);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        minHeight: 0,
-      }}
-    >
+    <div className="flex flex-col h-full min-h-0">
       {/* ── Filter bar ── */}
 
       <div className="flex gap-2 py-3 flex-wrap items-center shrink-0">

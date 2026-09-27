@@ -4,7 +4,6 @@ import { Globe } from "lucide-react";
 import {
   Field,
   InfoBox,
-  inputBase,
   SaveBar,
   SectionHeader,
   TestButton,
@@ -32,21 +31,8 @@ export default function WebhookSettings({
   sendTest: (channel: NotifChannel) => void;
 }) {
   return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 10,
-        padding: "22px 24px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-        }}
-      >
+    <div className="bg-(--bg-card) border border-(--border) rounded-[10px] px-6 py-5.5">
+      <div className="flex items-start justify-between">
         <SectionHeader
           icon={<Globe size={15} />}
           title="Custom Webhook"
@@ -58,21 +44,13 @@ export default function WebhookSettings({
         />
       </div>
       <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-          opacity: settings.webhook_enabled === "1" ? 1 : 0.45,
-          pointerEvents: settings.webhook_enabled === "1" ? "auto" : "none",
-        }}
+        className={`flex flex-col gap-3.5 ${
+          settings.webhook_enabled === "1"
+            ? "opacity-100"
+            : "opacity-45 pointer-events-none"
+        }`}
       >
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 100px",
-            gap: 14,
-          }}
-        >
+        <div className="grid grid-cols-[1fr_100px] gap-3.5">
           <Field label="Endpoint URL" required>
             <input
               type="url"
@@ -101,18 +79,13 @@ export default function WebhookSettings({
             value={settings.webhook_headers}
             onChange={(e) => set("webhook_headers", e.target.value)}
             rows={3}
-            style={{
-              ...inputBase,
-              fontFamily: "var(--font-mono, monospace)",
-              fontSize: 12,
-              resize: "vertical",
-            }}
+            className="w-full bg-(--bg-surface) border border-(--border) rounded-lg px-3 py-2.25 text-[12px] text-foreground outline-none transition-colors duration-150 box-border font-mono resize-y"
             placeholder={'{"X-Api-Key": "secret"}'}
           />
         </Field>
         <InfoBox>
           ZinaLog will POST a JSON body with fields:{" "}
-          <code style={{ fontSize: 11 }}>
+          <code className="text-[11px]">
             level, message, service, stack, metadata, created_at, source
           </code>
         </InfoBox>

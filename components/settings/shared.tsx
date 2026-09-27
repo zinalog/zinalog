@@ -13,18 +13,8 @@ import {
 } from "lucide-react";
 import type { NotifChannel } from "./types";
 
-export const inputBase: React.CSSProperties = {
-  width: "100%",
-  background: "var(--bg-surface)",
-  border: "1px solid var(--border)",
-  borderRadius: 8,
-  padding: "9px 12px",
-  fontSize: 13,
-  color: "var(--text-base)",
-  outline: "none",
-  transition: "border-color 0.15s",
-  boxSizing: "border-box",
-};
+export const inputClass =
+  "w-full bg-(--bg-surface) border border-(--border) rounded-lg px-3 py-2.25 text-[13px] text-foreground outline-none transition-colors duration-150 box-border";
 
 export function Field({
   label,
@@ -39,13 +29,11 @@ export function Field({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div className="flex items-center gap-1">
         <label className="text-[12px] font-medium text-(--text-muted) tracking-[0.3px]">
           {label}
         </label>
-        {required && (
-          <span style={{ color: "var(--error)", fontSize: 11 }}>*</span>
-        )}
+        {required && <span className="text-(--error) text-[11px]">*</span>}
       </div>
       {children}
       {hint && (
@@ -68,36 +56,15 @@ export function SectionHeader({
 }) {
   return (
     <div className="mb-6">
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          marginBottom: 6,
-        }}
-      >
+      <div className="flex items-center gap-2.5 mb-1.5">
         <div className="w-8 h-8 rounded-lg bg-[rgba(88,166,255,0.1)] border border-[rgba(88,166,255,0.15)] flex items-center justify-center text-(--accent) shrink-0">
           {icon}
         </div>
-        <h2
-          style={{
-            fontSize: 15,
-            fontWeight: 600,
-            color: "var(--text-base)",
-            margin: 0,
-          }}
-        >
+        <h2 className="text-[15px] font-semibold text-foreground m-0">
           {title}
         </h2>
       </div>
-      <p
-        style={{
-          fontSize: 12,
-          color: "var(--text-dim)",
-          margin: "0 0 0 42px",
-          lineHeight: 1.6,
-        }}
-      >
+      <p className="text-[12px] text-(--text-dim) mt-0 mr-0 mb-0 ml-10.5 leading-[1.6]">
         {description}
       </p>
     </div>
@@ -124,7 +91,7 @@ export function PasswordInput({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         autoComplete={autoComplete ?? "new-password"}
-        style={{ ...inputBase, paddingRight: 38 }}
+        className={`${inputClass} pr-9.5`}
       />
       <button
         type="button"
@@ -182,23 +149,10 @@ export function Toggle({
   return (
     <button
       onClick={() => onChange(!value)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        background: "none",
-        border: "none",
-        cursor: "pointer",
-        padding: 0,
-        flexShrink: 0,
-      }}
+      className="flex items-center gap-2 bg-transparent border-0 cursor-pointer p-0 shrink-0"
     >
       <span
-        style={{
-          fontSize: 12,
-          color: value ? "var(--success)" : "var(--text-dim)",
-          fontWeight: 500,
-        }}
+        className={`text-[12px] font-medium ${value ? "text-(--success)" : "text-(--text-dim)"}`}
       >
         {value ? "Enabled" : "Disabled"}
       </span>
@@ -213,17 +167,7 @@ export function Toggle({
 
 export function InfoBox({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      style={{
-        padding: "10px 14px",
-        background: "rgba(88,166,255,0.05)",
-        border: "1px solid rgba(88,166,255,0.15)",
-        borderRadius: 8,
-        fontSize: 12,
-        color: "var(--text-muted)",
-        lineHeight: 1.6,
-      }}
-    >
+    <div className="px-3.5 py-2.5 bg-[rgba(88,166,255,0.05)] border border-[rgba(88,166,255,0.15)] rounded-lg text-[12px] text-(--text-muted) leading-[1.6]">
       {children}
     </div>
   );
@@ -242,42 +186,24 @@ export function TestButton({
 }) {
   const isLoading = testing === channel;
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div className="flex items-center gap-2">
       <button
         onClick={() => onTest(channel)}
         disabled={isLoading}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 7,
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border)",
-          borderRadius: 8,
-          padding: "9px 16px",
-          fontSize: 13,
-          color: "var(--text-muted)",
-          cursor: isLoading ? "not-allowed" : "pointer",
-          opacity: isLoading ? 0.65 : 1,
-        }}
+        className={`flex items-center gap-1.75 bg-(--bg-surface) border border-(--border) rounded-lg px-4 py-2.25 text-[13px] text-(--text-muted) ${
+          isLoading ? "cursor-not-allowed opacity-[0.65]" : "cursor-pointer"
+        }`}
       >
         <Send size={13} />
         {isLoading ? "Sending…" : "Send test"}
       </button>
       {status && (
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 12,
-            color: status.ok ? "var(--success)" : "var(--error)",
-            padding: "6px 12px",
-            background: status.ok
-              ? "rgba(63,185,80,0.08)"
-              : "rgba(248,81,73,0.08)",
-            border: `1px solid ${status.ok ? "rgba(63,185,80,0.2)" : "rgba(248,81,73,0.2)"}`,
-            borderRadius: 6,
-          }}
+          className={`flex items-center gap-1.5 text-[12px] px-3 py-1.5 border rounded-md ${
+            status.ok
+              ? "text-(--success) bg-[rgba(63,185,80,0.08)] border-[rgba(63,185,80,0.2)]"
+              : "text-(--error) bg-[rgba(248,81,73,0.08)] border-[rgba(248,81,73,0.2)]"
+          }`}
         >
           {status.ok ? <CheckCircle size={12} /> : <XCircle size={12} />}
           {status.msg}

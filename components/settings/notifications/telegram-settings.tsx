@@ -32,21 +32,8 @@ export default function TelegramSettings({
   sendTest: (channel: NotifChannel) => void;
 }) {
   return (
-    <div
-      style={{
-        background: "var(--bg-card)",
-        border: "1px solid var(--border)",
-        borderRadius: 10,
-        padding: "22px 24px",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          justifyContent: "space-between",
-        }}
-      >
+    <div className="bg-(--bg-card) border border-(--border) rounded-[10px] px-6 py-5.5">
+      <div className="flex items-start justify-between">
         <SectionHeader
           icon={<MessageSquare size={15} />}
           title="Telegram"
@@ -58,13 +45,11 @@ export default function TelegramSettings({
         />
       </div>
       <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 14,
-          opacity: settings.telegram_enabled === "1" ? 1 : 0.45,
-          pointerEvents: settings.telegram_enabled === "1" ? "auto" : "none",
-        }}
+        className={`flex flex-col gap-3.5 ${
+          settings.telegram_enabled === "1"
+            ? "opacity-100"
+            : "opacity-45 pointer-events-none"
+        }`}
       >
         <Field
           label="Bot token"
@@ -94,7 +79,7 @@ export default function TelegramSettings({
           To get your chat ID, forward a message to{" "}
           <strong>@userinfobot</strong> or add your bot to a group and send a
           message, then check{" "}
-          <code style={{ fontSize: 11 }}>
+          <code className="text-[11px]">
             https://api.telegram.org/bot&#123;TOKEN&#125;/getUpdates
           </code>
         </InfoBox>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Bell, Globe, Hash, Mail, MessageSquare } from "lucide-react";
-import { Field, inputBase, SaveBar, SectionHeader } from "./shared";
+import { Field, inputClass, SaveBar, SectionHeader } from "./shared";
 import DiscordSettings from "./notifications/discord-settings";
 import EmailSettings from "./notifications/email-settings";
 import SlackSettings from "./notifications/slack-settings";
@@ -11,17 +11,15 @@ import WebhookSettings from "./notifications/webhook-settings";
 import type { AllSettings, NotifChannel, TestStatus } from "./types";
 
 const LEVEL_OPTIONS = ["error", "warning", "info", "debug"] as const;
-const LEVEL_COLORS: Record<string, string> = {
-  error: "var(--error)",
-  warning: "var(--warning)",
-  info: "var(--info)",
-  debug: "var(--debug)",
-};
-const LEVEL_BG: Record<string, string> = {
-  error: "rgba(248,81,73,0.12)",
-  warning: "rgba(210,153,34,0.12)",
-  info: "rgba(139,148,158,0.12)",
-  debug: "rgba(121,192,255,0.12)",
+// Border is the level colour at ~33% alpha.
+const LEVEL_ACTIVE_CLASS: Record<string, string> = {
+  error:
+    "text-(--error) bg-[rgba(248,81,73,0.12)] border-[color-mix(in_srgb,var(--error)_33%,transparent)]",
+  warning:
+    "text-(--warning) bg-[rgba(210,153,34,0.12)] border-[color-mix(in_srgb,var(--warning)_33%,transparent)]",
+  info: "text-(--info) bg-[rgba(139,148,158,0.12)] border-[color-mix(in_srgb,var(--info)_33%,transparent)]",
+  debug:
+    "text-(--debug) bg-[rgba(121,192,255,0.12)] border-[color-mix(in_srgb,var(--debug)_33%,transparent)]",
 };
 
 const CHANNELS: {
@@ -117,83 +115,45 @@ export default function NotificationsTab({
   };
 
   return (
-    <div
-      className="notif-layout"
-      style={{ display: "flex", gap: 16, alignItems: "flex-start" }}
-    >
+    <div className="notif-layout flex gap-4 items-start">
       {/* Channel list */}
-      <div
-        className="notif-channel-list"
-        style={{
-          width: 180,
-          flexShrink: 0,
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 10,
-          overflow: "hidden",
-        }}
-      >
-        {CHANNELS.map((ch, i) => {
+      <div className="notif-channel-list w-45 shrink-0 bg-(--bg-card) border border-(--border) rounded-[10px] overflow-hidden">
+        {CHANNELS.map((ch) => {
           const active = activeChannel === ch.id;
           const enabled = enabledChannels.has(ch.id);
           return (
             <button
               key={ch.id}
               onClick={() => setActiveChannel(ch.id)}
-              style={{
-                width: "100%",
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "11px 12px",
-                background: active ? "rgba(88,166,255,0.08)" : "transparent",
-                border: "none",
-                borderBottom:
-                  i < CHANNELS.length - 1 ? "1px solid var(--border)" : "none",
-                borderLeft: active
-                  ? "2px solid var(--accent)"
-                  : "2px solid transparent",
-                cursor: "pointer",
-                textAlign: "left",
-                transition: "all 0.15s",
-                boxSizing: "border-box",
-              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.75 border-0 border-b border-l-2 border-(--border) last:border-b-0 cursor-pointer text-left transition-all duration-150 box-border ${
+                active
+                  ? "bg-[rgba(88,166,255,0.08)] border-l-(--accent)"
+                  : "bg-transparent border-l-transparent"
+              }`}
             >
               <span
-                style={{
-                  color: active ? "var(--accent)" : "var(--text-dim)",
-                }}
+                className={active ? "text-(--accent)" : "text-(--text-dim)"}
               >
                 {ch.icon}
               </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="flex-1 min-w-0">
                 <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: active ? 600 : 400,
-                    color: active ? "var(--accent)" : "var(--text-muted)",
-                  }}
+                  className={`text-[13px] ${
+                    active
+                      ? "font-semibold text-(--accent)"
+                      : "font-normal text-(--text-muted)"
+                  }`}
                 >
                   {ch.label}
                 </div>
-                <div
-                  style={{
-                    fontSize: 10,
-                    color: "var(--text-dim)",
-                    marginTop: 1,
-                  }}
-                >
+                <div className="text-[10px] text-(--text-dim) mt-px">
                   {ch.description}
                 </div>
               </div>
               <div
-                style={{
-                  width: 7,
-                  height: 7,
-                  borderRadius: "50%",
-                  background: enabled ? "var(--success)" : "var(--border)",
-                  flexShrink: 0,
-                }}
+                className={`w-1.75 h-1.75 rounded-full shrink-0 ${
+                  enabled ? "bg-(--success)" : "bg-(--border)"
+                }`}
               />
             </button>
           );
@@ -220,59 +180,26 @@ export default function NotificationsTab({
         )}
 
         {/*  Alert Rules (shared)  */}
-        <div
-          style={{
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: 10,
-            padding: "22px 24px",
-          }}
-        >
+        <div className="bg-(--bg-card) border border-(--border) rounded-[10px] px-6 py-5.5">
           <SectionHeader
             icon={<Bell size={15} />}
             title="Alert Rules"
             description="Shared rules that apply to all enabled notification channels."
           />
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 18,
-            }}
-          >
+          <div className="flex flex-col gap-4.5">
             <Field label="Trigger alerts for">
-              <div
-                style={{
-                  display: "flex",
-                  flexWrap: "wrap",
-                  gap: 8,
-                  marginTop: 2,
-                }}
-              >
+              <div className="flex flex-wrap gap-2 mt-0.5">
                 {LEVEL_OPTIONS.map((lvl) => {
                   const active = selectedLevels.includes(lvl);
                   return (
                     <button
                       key={lvl}
                       onClick={() => toggleLevel(lvl)}
-                      style={{
-                        padding: "6px 14px",
-                        borderRadius: 6,
-                        fontSize: 11,
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.6px",
-                        cursor: "pointer",
-                        border: active
-                          ? `1px solid ${LEVEL_COLORS[lvl]}55`
-                          : "1px solid var(--border)",
-                        background: active
-                          ? LEVEL_BG[lvl]
-                          : "var(--bg-surface)",
-                        color: active ? LEVEL_COLORS[lvl] : "var(--text-dim)",
-                        fontFamily: "var(--font-mono, monospace)",
-                        transition: "all 0.15s",
-                      }}
+                      className={`px-3.5 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-[0.6px] cursor-pointer border font-mono transition-all duration-150 ${
+                        active
+                          ? LEVEL_ACTIVE_CLASS[lvl]
+                          : "border-(--border) bg-(--bg-surface) text-(--text-dim)"
+                      }`}
                     >
                       {lvl}
                     </button>
@@ -280,13 +207,7 @@ export default function NotificationsTab({
                 })}
               </div>
             </Field>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 16,
-              }}
-            >
+            <div className="grid grid-cols-2 gap-4">
               <Field
                 label="Occurrence threshold"
                 hint="Logs required before alerting"
@@ -297,19 +218,9 @@ export default function NotificationsTab({
                     min="1"
                     value={settings.alert_threshold}
                     onChange={(e) => set("alert_threshold", e.target.value)}
-                    style={{ ...inputBase, paddingRight: 48 }}
+                    className={`${inputClass} pr-12`}
                   />
-                  <span
-                    style={{
-                      position: "absolute",
-                      right: 12,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      fontSize: 11,
-                      color: "var(--text-dim)",
-                      pointerEvents: "none",
-                    }}
-                  >
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-(--text-dim) pointer-events-none">
                     logs
                   </span>
                 </div>
@@ -324,19 +235,9 @@ export default function NotificationsTab({
                     min="1"
                     value={settings.alert_cooldown}
                     onChange={(e) => set("alert_cooldown", e.target.value)}
-                    style={{ ...inputBase, paddingRight: 44 }}
+                    className={`${inputClass} pr-11`}
                   />
-                  <span
-                    style={{
-                      position: "absolute",
-                      right: 12,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      fontSize: 11,
-                      color: "var(--text-dim)",
-                      pointerEvents: "none",
-                    }}
-                  >
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-(--text-dim) pointer-events-none">
                     min
                   </span>
                 </div>
