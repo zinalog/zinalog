@@ -200,16 +200,9 @@ export default function NotificationsTab({
         })}
       </div>
 
-      {/* Channel config panel */}
-      <div
-        style={{
-          flex: 1,
-          minWidth: 0,
-          display: "flex",
-          flexDirection: "column",
-          gap: 16,
-        }}
-      >
+      {/* Channel config and alert rules: side by side on wide screens,
+          stacked below that. */}
+      <div className="flex-1 min-w-0 grid gap-4 items-start xl:grid-cols-2">
         {activeChannel === "email" && (
           <EmailSettings {...sharedProps} testStatus={testStatus.email} />
         )}
@@ -248,7 +241,14 @@ export default function NotificationsTab({
             }}
           >
             <Field label="Trigger alerts for">
-              <div style={{ display: "flex", gap: 8, marginTop: 2 }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  marginTop: 2,
+                }}
+              >
                 {LEVEL_OPTIONS.map((lvl) => {
                   const active = selectedLevels.includes(lvl);
                   return (

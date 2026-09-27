@@ -44,7 +44,6 @@ export default function DiscordSettings({
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          marginBottom: 20,
         }}
       >
         <SectionHeader

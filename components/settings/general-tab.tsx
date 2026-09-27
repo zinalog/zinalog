@@ -4,6 +4,64 @@ import { Database, Server, Settings } from "lucide-react";
 import { Field, inputBase, SaveBar, SectionHeader } from "./shared";
 import type { GeneralSettings } from "./types";
 
+// One labelled row of the General card: title and description on the left,
+// controls on the right. Stacks on narrow screens.
+function SettingsRow({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-3 md:gap-6 md:grid-cols-[220px_minmax(0,1fr)] py-5 border-t border-(--border) first:border-t-0 first:pt-0">
+      <div>
+        <div className="flex items-center gap-2 text-[13px] font-semibold text-foreground">
+          <span className="text-(--accent) flex">{icon}</span>
+          {title}
+        </div>
+        <p className="text-[11.5px] text-(--text-dim) leading-normal mt-1 mb-0">
+          {description}
+        </p>
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function NumberInput({
+  value,
+  onChange,
+  min,
+  unit,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  min: string;
+  unit?: string;
+}) {
+  return (
+    <div className="relative">
+      <input
+        type="number"
+        min={min}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ ...inputBase, paddingRight: unit ? 64 : 12 }}
+      />
+      {unit && (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-(--text-dim) pointer-events-none">
+          {unit}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function GeneralTab({
   general,
   setGeneral,
@@ -17,216 +75,106 @@ export default function GeneralTab({
   saving: boolean;
   saved: boolean;
 }) {
+  const systemInfo = [
+    {
+      label: "Database path",
+      value: process.env.DATABASE_PATH ?? "./data/logs.db",
+    },
+    { label: "Port", value: process.env.PORT ?? "4000" },
+    { label: "Environment", value: process.env.NODE_ENV ?? "development" },
+  ];
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 10,
-          padding: "22px 24px",
-        }}
+    <div className="bg-(--bg-card) border border-(--border) rounded-[10px] px-6 py-5.5">
+      <SectionHeader
+        icon={<Settings size={15} />}
+        title="General"
+        description="Session, log retention and runtime details for this zinalog instance."
+      />
+
+      <SettingsRow
+        icon={<Settings size={13} />}
+        title="Session"
+        description="How long a signed-in user can stay idle before logging in again."
       >
-        <SectionHeader
-          icon={<Settings size={15} />}
-          title="Session"
-          description="Control how long a signed-in user can stay idle before zinalog requires them to log in again."
-        />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 360px)",
-            gap: 16,
-          }}
-        >
+        <div className="max-w-90">
           <Field
             label="Idle timeout"
             hint="Users are logged out after this many minutes without activity"
             required
           >
-            <div className="relative">
-              <input
-                type="number"
-                min="1"
-                value={general.session_idle_timeout_minutes}
-                onChange={(e) =>
-                  setGeneral((s) => ({
-                    ...s,
-                    session_idle_timeout_minutes: e.target.value,
-                  }))
-                }
-                style={{ ...inputBase, paddingRight: 58 }}
-              />
-              <span
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontSize: 11,
-                  color: "var(--text-dim)",
-                  pointerEvents: "none",
-                }}
-              >
-                minutes
-              </span>
-            </div>
+            <NumberInput
+              min="1"
+              unit="minutes"
+              value={general.session_idle_timeout_minutes}
+              onChange={(value) =>
+                setGeneral((s) => ({
+                  ...s,
+                  session_idle_timeout_minutes: value,
+                }))
+              }
+            />
           </Field>
         </div>
-        <SaveBar onSave={saveGeneral} saving={saving} saved={saved} />
-      </div>
+      </SettingsRow>
 
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 10,
-          padding: "22px 24px",
-        }}
+      <SettingsRow
+        icon={<Database size={13} />}
+        title="Log Retention"
+        description="How long logs are kept and the maximum number stored."
       >
-        <SectionHeader
-          icon={<Database size={15} />}
-          title="Log Retention"
-          description="Control how long logs are kept and the maximum storage size."
-        />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 16,
-          }}
-        >
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Retention period"
             hint="Logs older than this are automatically purged"
             required
           >
-            <div className="relative">
-              <input
-                type="number"
-                min="1"
-                value={general.retention_days}
-                onChange={(e) =>
-                  setGeneral((s) => ({
-                    ...s,
-                    retention_days: e.target.value,
-                  }))
-                }
-                style={{ ...inputBase, paddingRight: 44 }}
-              />
-              <span
-                style={{
-                  position: "absolute",
-                  right: 12,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontSize: 11,
-                  color: "var(--text-dim)",
-                  pointerEvents: "none",
-                }}
-              >
-                days
-              </span>
-            </div>
+            <NumberInput
+              min="1"
+              unit="days"
+              value={general.retention_days}
+              onChange={(value) =>
+                setGeneral((s) => ({ ...s, retention_days: value }))
+              }
+            />
           </Field>
           <Field
             label="Max log count"
             hint="Oldest entries are removed when this is exceeded"
             required
           >
-            <input
-              type="number"
+            <NumberInput
               min="1000"
               value={general.max_logs}
-              onChange={(e) =>
-                setGeneral((s) => ({
-                  ...s,
-                  max_logs: e.target.value,
-                }))
+              onChange={(value) =>
+                setGeneral((s) => ({ ...s, max_logs: value }))
               }
-              className="w-full bg-(--bg-surface) border border-(--border) rounded-lg px-3 py-2.25 text-[13px] text-foreground outline-none box-border transition-colors"
             />
           </Field>
         </div>
-        <SaveBar onSave={saveGeneral} saving={saving} saved={saved} />
-      </div>
+      </SettingsRow>
 
-      <div
-        style={{
-          background: "var(--bg-card)",
-          border: "1px solid var(--border)",
-          borderRadius: 10,
-          padding: "22px 24px",
-        }}
+      <SettingsRow
+        icon={<Server size={13} />}
+        title="System Information"
+        description="Read-only runtime environment details."
       >
-        <SectionHeader
-          icon={<Server size={15} />}
-          title="System Information"
-          description="Read-only runtime environment details."
-        />
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 0,
-            borderRadius: 8,
-            border: "1px solid var(--border)",
-            overflow: "hidden",
-          }}
-        >
-          {[
-            {
-              label: "Database Path",
-              value: process.env.DATABASE_PATH ?? "./data/logs.db",
-              mono: true,
-            },
-            {
-              label: "Port",
-              value: process.env.PORT ?? "4000",
-              mono: true,
-            },
-            {
-              label: "Environment",
-              value: process.env.NODE_ENV ?? "development",
-              mono: false,
-            },
-          ].map((item, i) => (
-            <div
-              key={item.label}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                padding: "10px 14px",
-                background:
-                  i % 2 === 0 ? "transparent" : "rgba(255,255,255,0.015)",
-                borderBottom: i < 2 ? "1px solid var(--border)" : "none",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-dim)",
-                  width: 140,
-                  flexShrink: 0,
-                }}
-              >
-                {item.label}
-              </span>
-              <code
-                style={{
-                  fontSize: 12,
-                  color: "var(--text-muted)",
-                  fontFamily: item.mono
-                    ? "var(--font-mono, monospace)"
-                    : "inherit",
-                }}
+        <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-3 m-0">
+          {systemInfo.map((item) => (
+            <div key={item.label} className="min-w-0">
+              <dt className="text-[11px] text-(--text-dim)">{item.label}</dt>
+              <dd
+                title={item.value}
+                className="m-0 mt-0.5 text-[12px] text-(--text-muted) font-mono truncate"
               >
                 {item.value}
-              </code>
+              </dd>
             </div>
           ))}
-        </div>
-      </div>
+        </dl>
+      </SettingsRow>
+
+      <SaveBar onSave={saveGeneral} saving={saving} saved={saved} />
     </div>
   );
 }

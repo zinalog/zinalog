@@ -49,7 +49,6 @@ export default function EmailSettings({
           display: "grid",
           gridTemplateColumns: "repeat(3,1fr)",
           gap: 10,
-          marginBottom: 20,
         }}
       >
         {(["disabled", "smtp", "resend"] as const).map((p) => {

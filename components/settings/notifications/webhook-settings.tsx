@@ -45,7 +45,6 @@ export default function WebhookSettings({
           display: "flex",
           alignItems: "flex-start",
           justifyContent: "space-between",
-          marginBottom: 20,
         }}
       >
         <SectionHeader
