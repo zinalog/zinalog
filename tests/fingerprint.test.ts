@@ -5,6 +5,7 @@ import {
   extractStackSignature,
   normalizeMessage,
 } from "../lib/fingerprint";
+import { alertHeadline } from "../lib/alert-format";
 
 test("normalizeMessage replaces variable values with placeholders", () => {
   const cases: Array<[string, string]> = [
@@ -139,5 +140,17 @@ test("computeFingerprint client override is scoped to level and service", () => 
   assert.notEqual(
     a,
     computeFingerprint({ level: "error", service: "billing", message: "a 1" })
+  );
+});
+
+test("alertHeadline prefixes issue-based alerts", () => {
+  assert.equal(alertHeadline({ message: "boom" }), "boom");
+  assert.equal(
+    alertHeadline({ message: "boom", alert_reason: "new_issue" }),
+    "New issue: boom"
+  );
+  assert.equal(
+    alertHeadline({ message: "boom", alert_reason: "regression" }),
+    "Regression: boom"
   );
 });

@@ -15,6 +15,7 @@ const compiledDbSubmodulePaths = [
   "settings",
   "users",
   "monitors",
+  "issues",
 ].map((name) => path.resolve(__dirname, `../lib/db/${name}.js`));
 const cjsRequire = createRequire(__filename);
 
@@ -56,6 +57,7 @@ async function closeAndCleanup(
   previousEncryptionKey: string | undefined
 ) {
   const db = await dbModule.getDb();
+  await dbModule.waitForLogBackfill();
   await db.close();
   if (previousNodeEnv === undefined) {
     delete process.env.NODE_ENV;
@@ -793,14 +795,17 @@ test("groups logs by fingerprint and backfills rows missing one", async (t) => {
   );
   assert.equal(groups[1].latest_id, latestId);
 
-  // Simulate rows written before the fingerprint column existed, then reopen
-  // the database so startup backfills them.
+  // Simulate rows written before the fingerprint column existed (so never
+  // counted into an issue), then reopen so startup backfills them.
   const db = await dbModule.getDb();
+  await dbModule.waitForLogBackfill();
   await db.run("UPDATE logs SET fingerprint = NULL");
+  await db.run("DELETE FROM issues");
   await db.close();
   delete global.__dbPromise;
   clearDbModuleCache();
   currentDbModule = cjsRequire(compiledDbModulePath) as DbModule;
+  await currentDbModule.waitForLogBackfill();
 
   const reopened = await currentDbModule.getDb();
   const missing = (await reopened.get<{ c: number }>(
@@ -814,5 +819,273 @@ test("groups logs by fingerprint and backfills rows missing one", async (t) => {
   assert.deepEqual(
     backfilled.map((group) => group.count),
     [2, 1, 1]
+  );
+
+  // The backfill also rebuilt the issues for those rows.
+  const issues = await currentDbModule.listIssues({
+    level: "error",
+    status: "all",
+  });
+  assert.deepEqual(
+    issues
+      .map((issue) => ({ title: issue.title, count: issue.count }))
+      .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title)),
+    [
+      { title: "User 2 not found", count: 2 },
+      { title: "also different", count: 1 },
+      { title: "totally different", count: 1 },
+    ]
+  );
+  const userIssue = issues.find((issue) => issue.title === "User 2 not found")!;
+  assert.equal(userIssue.last_log_id, latestId);
+});
+
+test("tracks issue lifecycle: new, repeat, regression and ignored", async (t) => {
+  const {
+    tempDir,
+    dbModule,
+    previousNodeEnv,
+    previousDatabasePath,
+    previousEncryptionKey,
+  } = await loadDbModule();
+  t.after(async () =>
+    closeAndCleanup(
+      tempDir,
+      dbModule,
+      previousNodeEnv,
+      previousDatabasePath,
+      previousEncryptionKey
+    )
+  );
+
+  const log = (message: string) =>
+    dbModule.ingestLog({ level: "error", message, service: "api" });
+
+  const first = await log("Job 1 failed");
+  assert.equal(first.issue.isNew, true);
+  assert.equal(first.issue.isRegression, false);
+  assert.equal(first.issue.status, "open");
+
+  const second = await log("Job 2 failed");
+  assert.equal(second.issue.id, first.issue.id);
+  assert.equal(second.issue.isNew, false);
+  assert.equal(second.issue.isRegression, false);
+
+  await dbModule.updateIssueStatus(first.issue.id, "resolved", "alice");
+  const regression = await log("Job 3 failed");
+  assert.equal(regression.issue.isRegression, true);
+  assert.equal(regression.issue.status, "open");
+
+  const afterRegression = await log("Job 4 failed");
+  assert.equal(afterRegression.issue.isRegression, false);
+
+  let issue = (await dbModule.getIssue(first.issue.id))!;
+  assert.equal(issue.count, 4);
+  assert.equal(issue.title, "Job 4 failed");
+  assert.equal(issue.last_log_id, afterRegression.id);
+  assert.equal(issue.regressed_log_id, regression.id);
+
+  await dbModule.updateIssueStatus(first.issue.id, "ignored", "alice");
+  const ignored = await log("Job 5 failed");
+  assert.equal(ignored.issue.status, "ignored");
+  assert.equal(ignored.issue.isNew, false);
+  assert.equal(ignored.issue.isRegression, false);
+
+  issue = (await dbModule.getIssue(first.issue.id))!;
+  assert.equal(issue.count, 5);
+  assert.equal(issue.status_changed_by, "alice");
+  assert.equal(issue.regressed_log_id, null);
+});
+
+test("ignored issues don't count towards the alert threshold", async (t) => {
+  const {
+    tempDir,
+    dbModule,
+    previousNodeEnv,
+    previousDatabasePath,
+    previousEncryptionKey,
+  } = await loadDbModule();
+  t.after(async () =>
+    closeAndCleanup(
+      tempDir,
+      dbModule,
+      previousNodeEnv,
+      previousDatabasePath,
+      previousEncryptionKey
+    )
+  );
+
+  const noisy = await dbModule.ingestLog({
+    level: "error",
+    message: "Cache miss 1",
+    service: "api",
+  });
+  await dbModule.ingestLog({
+    level: "error",
+    message: "Cache miss 2",
+    service: "api",
+  });
+  await dbModule.ingestLog({
+    level: "error",
+    message: "Disk full",
+    service: "api",
+  });
+  assert.equal(await dbModule.countRecentLogs("error", "api", 60), 3);
+
+  await dbModule.updateIssueStatus(noisy.issue.id, "ignored", null);
+  assert.equal(await dbModule.countRecentLogs("error", "api", 60), 1);
+});
+
+test("claims issue alerts once per cooldown window", async (t) => {
+  const {
+    tempDir,
+    dbModule,
+    previousNodeEnv,
+    previousDatabasePath,
+    previousEncryptionKey,
+  } = await loadDbModule();
+  t.after(async () =>
+    closeAndCleanup(
+      tempDir,
+      dbModule,
+      previousNodeEnv,
+      previousDatabasePath,
+      previousEncryptionKey
+    )
+  );
+
+  const { issue } = await dbModule.ingestLog({
+    level: "error",
+    message: "boom",
+  });
+  assert.equal(await dbModule.claimIssueAlert(issue.id, 15), true);
+  assert.equal(await dbModule.claimIssueAlert(issue.id, 15), false);
+
+  const db = await dbModule.getDb();
+  await db.run(
+    "UPDATE issues SET last_alerted_at = datetime('now', '-20 minutes') WHERE id = ?",
+    [issue.id]
+  );
+  assert.equal(await dbModule.claimIssueAlert(issue.id, 15), true);
+});
+
+test("lists issues by status and service access, with hourly counts", async (t) => {
+  const {
+    tempDir,
+    dbModule,
+    previousNodeEnv,
+    previousDatabasePath,
+    previousEncryptionKey,
+  } = await loadDbModule();
+  t.after(async () =>
+    closeAndCleanup(
+      tempDir,
+      dbModule,
+      previousNodeEnv,
+      previousDatabasePath,
+      previousEncryptionKey
+    )
+  );
+
+  const billing = await dbModule.ingestLog({
+    level: "error",
+    message: "Charge 1 declined",
+    service: "billing",
+  });
+  await dbModule.ingestLog({
+    level: "error",
+    message: "Charge 2 declined",
+    service: "billing",
+  });
+  await dbModule.ingestLog({
+    level: "error",
+    message: "Search timed out",
+    service: "search",
+  });
+  await dbModule.ingestLog({ level: "warning", message: "Slow query" });
+  await dbModule.updateIssueStatus(billing.issue.id, "resolved", null);
+
+  assert.deepEqual(
+    (await dbModule.listIssues({ level: "error" })).map((i) => i.title),
+    ["Search timed out", "Charge 2 declined"]
+  );
+  assert.deepEqual(
+    (await dbModule.listIssues({ level: "error", status: "open" })).map(
+      (i) => i.title
+    ),
+    ["Search timed out"]
+  );
+  assert.deepEqual(
+    (
+      await dbModule.listIssues({ level: "error", status: "all" }, ["billing"])
+    ).map((i) => i.title),
+    ["Charge 2 declined"]
+  );
+  assert.deepEqual(await dbModule.countIssuesByStatus("error"), {
+    open: 1,
+    resolved: 1,
+    ignored: 0,
+  });
+  assert.equal(await dbModule.getIssue(billing.issue.id, ["search"]), null);
+
+  const issue = (await dbModule.getIssue(billing.issue.id))!;
+  const hourly = await dbModule.getIssueHourlyCounts(issue.fingerprint);
+  assert.equal(hourly.length, 24 * 7);
+  assert.equal(
+    hourly.reduce((acc, h) => acc + h.count, 0),
+    2
+  );
+  assert.equal(hourly[hourly.length - 1].count, 2);
+
+  const samples = await dbModule.listIssueSamples(issue.fingerprint);
+  assert.deepEqual(
+    samples.map((s) => s.message),
+    ["Charge 2 declined", "Charge 1 declined"]
+  );
+});
+
+test("issues migration seeds issues from already-fingerprinted logs", async (t) => {
+  const {
+    tempDir,
+    dbModule,
+    previousNodeEnv,
+    previousDatabasePath,
+    previousEncryptionKey,
+  } = await loadDbModule();
+  let currentDbModule = dbModule;
+  t.after(async () =>
+    closeAndCleanup(
+      tempDir,
+      currentDbModule,
+      previousNodeEnv,
+      previousDatabasePath,
+      previousEncryptionKey
+    )
+  );
+
+  await dbModule.insertLog({ level: "error", message: "Order 1 stuck" });
+  await dbModule.insertLog({ level: "error", message: "Order 2 stuck" });
+
+  // Roll the issues migration back so reopening re-applies it.
+  const db = await dbModule.getDb();
+  await dbModule.waitForLogBackfill();
+  await db.exec("DROP TABLE issues");
+  await db.run("DELETE FROM schema_migrations WHERE id = '20260927130000'");
+  await db.close();
+  delete global.__dbPromise;
+  clearDbModuleCache();
+  currentDbModule = cjsRequire(compiledDbModulePath) as DbModule;
+
+  const issues = await currentDbModule.listIssues({
+    level: "error",
+    status: "all",
+  });
+  assert.deepEqual(
+    issues.map((issue) => ({
+      title: issue.title,
+      count: issue.count,
+      status: issue.status,
+    })),
+    [{ title: "Order 2 stuck", count: 2, status: "open" }]
   );
 });

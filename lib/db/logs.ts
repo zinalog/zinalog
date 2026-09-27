@@ -8,6 +8,7 @@ import {
 import { getSettingFromDb } from "./settings";
 import { emitNewLog } from "../log-events";
 import { computeFingerprint } from "../fingerprint";
+import { recordIssueOccurrence, type IssueEvent } from "./issues";
 
 async function getMaxLogsLimitFromDb(
   database: SqliteDatabase
@@ -95,7 +96,7 @@ export async function queryLogs(
   return { logs, total: row?.total ?? 0 };
 }
 
-export async function insertLog(data: {
+export async function ingestLog(data: {
   level: string;
   message: string;
   service?: string | null;
@@ -103,9 +104,16 @@ export async function insertLog(data: {
   metadata?: string | null;
   api_key_id?: number | null;
   fingerprint?: string | null;
-}): Promise<number> {
+}): Promise<{ id: number; issue: IssueEvent }> {
   const database = await getDb();
   const maxLogs = await getMaxLogsLimitFromDb(database);
+  const fingerprint = computeFingerprint({
+    level: data.level,
+    message: data.message,
+    service: data.service,
+    stack: data.stack,
+    clientFingerprint: data.fingerprint,
+  });
 
   const result = await database.run(
     `INSERT INTO logs (level, message, service, stack, metadata, api_key_id, fingerprint)
@@ -117,19 +125,21 @@ export async function insertLog(data: {
       data.stack ?? null,
       data.metadata ?? null,
       data.api_key_id ?? null,
-      computeFingerprint({
-        level: data.level,
-        message: data.message,
-        service: data.service,
-        stack: data.stack,
-        clientFingerprint: data.fingerprint,
-      }),
+      fingerprint,
     ]
   );
+  const id = result.lastID as number;
+
+  const issue = await recordIssueOccurrence(database, {
+    id,
+    fingerprint,
+    level: data.level,
+    service: data.service ?? null,
+    message: data.message,
+  });
 
   await trimLogsToMaxWithDb(database, maxLogs);
 
-  const id = result.lastID as number;
   const inserted = (await database.get<Log>(`SELECT * FROM logs WHERE id = ?`, [
     id,
   ])) as Log | undefined;
@@ -137,7 +147,13 @@ export async function insertLog(data: {
     emitNewLog(inserted);
   }
 
-  return id;
+  return { id, issue };
+}
+
+export async function insertLog(
+  data: Parameters<typeof ingestLog>[0]
+): Promise<number> {
+  return (await ingestLog(data)).id;
 }
 
 export async function trimLogsToMax(maxLogs: number): Promise<number> {
@@ -361,11 +377,17 @@ export async function countRecentLogs(
   const cond = service ? "AND service = ?" : "";
   const args = service ? [level, minutes, service] : [level, minutes];
   const database = await getDb();
+  // Ignored issues stay silent, so their occurrences mustn't push a service
+  // over the alert threshold either.
   const row = (await database.get<{ c: number }>(
     `SELECT COUNT(*) as c FROM logs
      WHERE level = ?
      AND created_at >= datetime('now', '-' || ? || ' minutes')
-     ${cond}`,
+     ${cond}
+     AND (
+       fingerprint IS NULL
+       OR fingerprint NOT IN (SELECT fingerprint FROM issues WHERE status = 'ignored')
+     )`,
     args
   )) as { c: number } | undefined;
 

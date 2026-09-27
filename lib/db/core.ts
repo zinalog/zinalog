@@ -197,44 +197,122 @@ async function migrateUsersTable(database: SqliteDatabase): Promise<void> {
 
 // Rows written before the fingerprint column existed (or restored from an
 // older backup) have no fingerprint. Fingerprints are computed in JS, so this
-// can't live in a SQL migration; it's a cheap no-op once every row is filled.
+// can't live in a SQL migration. It runs in the background after startup so a
+// large table doesn't hold up the first request, and it's a single cheap
+// query once every row is filled.
+//
+// No explicit transactions: the connection is shared with live requests and
+// the monitor scheduler, which run their own BEGIN/COMMIT on it. Each batch is
+// instead one atomic UPDATE, followed by one upsert per issue it touched.
+const BACKFILL_BATCH_SIZE = 500;
+
 async function backfillLogFingerprints(
   database: SqliteDatabase
 ): Promise<void> {
-  const BATCH_SIZE = 1000;
-
   for (;;) {
     const rows = (await database.all(
-      `SELECT id, level, message, service, stack
+      `SELECT id, level, message, service, stack, created_at
        FROM logs
        WHERE fingerprint IS NULL
+       ORDER BY id
        LIMIT ?`,
-      [BATCH_SIZE]
+      [BACKFILL_BATCH_SIZE]
     )) as Array<{
       id: number;
       level: string;
       message: string;
       service: string | null;
       stack: string | null;
+      created_at: string;
     }>;
     if (rows.length === 0) return;
 
-    await database.exec("BEGIN IMMEDIATE");
-    try {
-      for (const row of rows) {
-        await database.run("UPDATE logs SET fingerprint = ? WHERE id = ?", [
-          computeFingerprint(row),
-          row.id,
-        ]);
+    const issues = new Map<
+      string,
+      {
+        level: string;
+        service: string | null;
+        title: string;
+        count: number;
+        first_seen: string;
+        last_seen: string;
+        last_log_id: number;
       }
-      await database.exec("COMMIT");
-    } catch (error) {
-      await database.exec("ROLLBACK");
-      throw error;
+    >();
+    const caseParams: unknown[] = [];
+    for (const row of rows) {
+      const fingerprint = computeFingerprint(row);
+      caseParams.push(row.id, fingerprint);
+
+      const issue = issues.get(fingerprint);
+      if (!issue) {
+        issues.set(fingerprint, {
+          level: row.level,
+          service: row.service,
+          title: row.message,
+          count: 1,
+          first_seen: row.created_at,
+          last_seen: row.created_at,
+          last_log_id: row.id,
+        });
+        continue;
+      }
+      issue.count += 1;
+      if (row.created_at < issue.first_seen) issue.first_seen = row.created_at;
+      if (row.created_at > issue.last_seen) issue.last_seen = row.created_at;
+      // Rows are read in id order, so the last one is the latest.
+      issue.title = row.message;
+      issue.last_log_id = row.id;
     }
 
-    if (rows.length < BATCH_SIZE) return;
+    // "AND fingerprint IS NULL" keeps the update idempotent if two backfills
+    // ever overlap (e.g. a dev-server reload), so no row is counted twice.
+    const updated = await database.run(
+      `UPDATE logs
+       SET fingerprint = CASE id ${rows.map(() => "WHEN ? THEN ?").join(" ")} END
+       WHERE id IN (${rows.map(() => "?").join(", ")})
+       AND fingerprint IS NULL`,
+      [...caseParams, ...rows.map((row) => row.id)]
+    );
+
+    if (updated.changes === rows.length) {
+      for (const [fingerprint, issue] of issues) {
+        await database.run(
+          `INSERT INTO issues (
+             fingerprint, level, service, title, count,
+             first_seen, last_seen, last_log_id
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(fingerprint) DO UPDATE SET
+             count = count + excluded.count,
+             first_seen = MIN(first_seen, excluded.first_seen),
+             last_seen = MAX(last_seen, excluded.last_seen),
+             title = CASE WHEN excluded.last_log_id > IFNULL(last_log_id, 0)
+                          THEN excluded.title ELSE title END,
+             last_log_id = MAX(IFNULL(last_log_id, 0), excluded.last_log_id)`,
+          [
+            fingerprint,
+            issue.level,
+            issue.service,
+            issue.title,
+            issue.count,
+            issue.first_seen,
+            issue.last_seen,
+            issue.last_log_id,
+          ]
+        );
+      }
+    }
+
+    if (rows.length < BACKFILL_BATCH_SIZE) return;
   }
+}
+
+let logBackfillPromise: Promise<void> = Promise.resolve();
+
+/** Resolves once the startup fingerprint backfill has finished. */
+export async function waitForLogBackfill(): Promise<void> {
+  await getDb();
+  await logBackfillPromise;
 }
 
 async function createDb(): Promise<SqliteDatabase> {
@@ -348,7 +426,6 @@ async function createDb(): Promise<SqliteDatabase> {
   await migrateApiKeysTable(database);
   await migrateUsersTable(database);
   await runPendingMigrations(database);
-  await backfillLogFingerprints(database);
 
   const defaults: Array<[string, string]> = [
     ["retention_days", "30"],
@@ -387,6 +464,10 @@ async function createDb(): Promise<SqliteDatabase> {
       [key, value]
     );
   }
+
+  logBackfillPromise = backfillLogFingerprints(database).catch((error) => {
+    console.error("[db] log fingerprint backfill failed", error);
+  });
 
   return database;
 }
