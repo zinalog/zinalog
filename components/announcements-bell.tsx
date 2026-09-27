@@ -145,8 +145,7 @@ export default function AnnouncementsBell() {
       body: JSON.stringify({ id }),
     })
       .then((res) => {
-        // 404 means it's no longer in the feed, so it stays hidden anyway.
-        if (!res.ok && res.status !== 404) restore();
+        if (!res.ok) restore();
       })
       .catch(restore);
   };

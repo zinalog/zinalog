@@ -209,10 +209,24 @@ export function parseAnnouncementsFeed(
   );
 }
 
-let cache: { data: unknown; expiresAt: number } | null = null;
-let inflight: Promise<unknown> | null = null;
+// Kept on globalThis rather than in module scope: Next.js can load this
+// module separately for each route, and every route must see the same feed.
+interface FeedCache {
+  entry: { data: unknown; expiresAt: number } | null;
+  inflight: Promise<unknown> | null;
+}
+
+declare global {
+  var __announcementsCache: FeedCache | undefined;
+}
+
+function feedCache(): FeedCache {
+  globalThis.__announcementsCache ??= { entry: null, inflight: null };
+  return globalThis.__announcementsCache;
+}
 
 async function fetchFeed(): Promise<unknown> {
+  const state = feedCache();
   try {
     const res = await fetch(ANNOUNCEMENTS_URL, {
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
@@ -220,29 +234,30 @@ async function fetchFeed(): Promise<unknown> {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data: unknown = await res.json();
-    cache = { data, expiresAt: Date.now() + CACHE_TTL_MS };
+    state.entry = { data, expiresAt: Date.now() + CACHE_TTL_MS };
   } catch {
     // Keep serving the last good feed if there is one; otherwise cache the
     // failure briefly so an unreachable GitHub isn't hit on every request.
-    cache = {
-      data: cache?.data ?? null,
+    state.entry = {
+      data: state.entry?.data ?? null,
       expiresAt: Date.now() + FAILURE_TTL_MS,
     };
   }
-  return cache.data;
+  return state.entry.data;
 }
 
 export async function getAnnouncements(
   appVersion: string
 ): Promise<Announcement[]> {
+  const state = feedCache();
   let data: unknown;
-  if (cache && cache.expiresAt > Date.now()) {
-    data = cache.data;
+  if (state.entry && state.entry.expiresAt > Date.now()) {
+    data = state.entry.data;
   } else {
-    inflight ??= fetchFeed().finally(() => {
-      inflight = null;
+    state.inflight ??= fetchFeed().finally(() => {
+      state.inflight = null;
     });
-    data = await inflight;
+    data = await state.inflight;
   }
 
   // Expiry is re-evaluated on every call, not just when the feed is fetched.
