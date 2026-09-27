@@ -1,7 +1,11 @@
 import LogGroupPage from "@/components/log-group-page";
 import { Info } from "lucide-react";
 
-export default function InfoLogsPage() {
+export default function InfoLogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string | string[] }>;
+}) {
   return (
     <LogGroupPage
       level="info"
@@ -12,6 +16,7 @@ export default function InfoLogsPage() {
       Icon={Info}
       emptyText="Info entries will appear here when your applications send info-level logs"
       statLabel="Info"
+      searchParams={searchParams}
     />
   );
 }

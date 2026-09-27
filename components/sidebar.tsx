@@ -109,7 +109,9 @@ function NavLinks({
       : []),
   ];
 
-  const logsActive = pathname.startsWith("/dashboard/logs");
+  const logsActive =
+    pathname.startsWith("/dashboard/logs") ||
+    pathname.startsWith("/dashboard/issues");
   const adminActive =
     canSeeAdministrative && adminItems.some(({ href }) => isActive(href));
   const [logsPinnedOpen, setLogsPinnedOpen] = useState(false);

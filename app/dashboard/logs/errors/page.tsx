@@ -1,7 +1,11 @@
 import LogGroupPage from "@/components/log-group-page";
 import { AlertTriangle } from "lucide-react";
 
-export default function ErrorLogsPage() {
+export default function ErrorLogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string | string[] }>;
+}) {
   return (
     <LogGroupPage
       level="error"
@@ -12,6 +16,7 @@ export default function ErrorLogsPage() {
       Icon={AlertTriangle}
       emptyText="Errors will appear here when your applications send error-level logs"
       statLabel="Error"
+      searchParams={searchParams}
     />
   );
 }

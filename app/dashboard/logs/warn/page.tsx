@@ -1,7 +1,11 @@
 import LogGroupPage from "@/components/log-group-page";
 import { TriangleAlert } from "lucide-react";
 
-export default function WarnLogsPage() {
+export default function WarnLogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string | string[] }>;
+}) {
   return (
     <LogGroupPage
       level="warning"
@@ -12,6 +16,7 @@ export default function WarnLogsPage() {
       Icon={TriangleAlert}
       emptyText="Warnings will appear here when your applications send warn-level logs"
       statLabel="Warning"
+      searchParams={searchParams}
     />
   );
 }

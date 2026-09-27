@@ -1,7 +1,11 @@
 import LogGroupPage from "@/components/log-group-page";
 import { Bug } from "lucide-react";
 
-export default function DebugLogsPage() {
+export default function DebugLogsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string | string[] }>;
+}) {
   return (
     <LogGroupPage
       level="debug"
@@ -12,6 +16,7 @@ export default function DebugLogsPage() {
       Icon={Bug}
       emptyText="Debug entries will appear here when your applications send debug-level logs"
       statLabel="Debug"
+      searchParams={searchParams}
     />
   );
 }
