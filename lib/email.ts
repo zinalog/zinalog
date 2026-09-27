@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { Resend } from "resend";
 import { getAllSettings } from "./db";
+import { alertHeadline, type AlertReason } from "./alert-format";
 
 export interface EmailPayload {
   to: string;
@@ -106,6 +107,7 @@ export function buildAlertEmail(log: {
   stack: string | null;
   metadata: string | null;
   created_at: string;
+  alert_reason?: AlertReason | null;
 }): { subject: string; html: string } {
   const levelColors: Record<string, string> = {
     error: "#f85149",
@@ -115,7 +117,8 @@ export function buildAlertEmail(log: {
   };
   const color = levelColors[log.level] ?? "#8b949e";
   const service = escapeHtml(log.service ?? "unknown service");
-  const message = escapeHtml(log.message);
+  const headline = alertHeadline(log);
+  const message = escapeHtml(headline);
 
   let metaHtml = "";
   if (log.metadata) {
@@ -142,7 +145,7 @@ export function buildAlertEmail(log: {
       </tr>`
     : "";
 
-  const subject = `[ZinaLog] ${log.level.toUpperCase()}: ${log.message.slice(0, 60)}${log.message.length > 60 ? "…" : ""}`;
+  const subject = `[ZinaLog] ${log.level.toUpperCase()}: ${headline.slice(0, 60)}${headline.length > 60 ? "…" : ""}`;
 
   const html = `
 <!DOCTYPE html>

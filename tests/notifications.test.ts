@@ -28,6 +28,7 @@ const compiledDbSubmodulePaths = [
   "settings",
   "users",
   "monitors",
+  "issues",
 ].map((name) => path.resolve(__dirname, `../lib/db/${name}.js`));
 
 const cjsRequire = createRequire(__filename);

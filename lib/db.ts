@@ -2,12 +2,14 @@
 // Implementation now lives in domain modules:
 //   ./db/core     connection singleton, schema/migrations, shared types & helpers
 //   ./db/logs     log ingestion, querying, stats, retention
+//   ./db/issues   issues (fingerprint groups), triage status, alert claims
 //   ./db/api-keys API key issuance/verification
 //   ./db/settings application settings (incl. encrypted secrets)
 //   ./db/users    users, sessions, auth challenges, audit logs
 //   ./db/monitors uptime monitor CRUD, checks, uptime stats
 export {
   getDb,
+  waitForLogBackfill,
   type ApiKey,
   type ApiKeySummary,
   type AuthChallenge,
@@ -29,11 +31,27 @@ export {
   getLogGroups,
   getServices,
   getStats,
+  ingestLog,
   insertLog,
   queryLogs,
   trimLogsToMax,
   type LogGroup,
 } from "./db/logs";
+
+export {
+  ISSUE_STATUSES,
+  claimIssueAlert,
+  countIssuesByStatus,
+  getIssue,
+  getIssueHourlyCounts,
+  isIssueStatus,
+  listIssueSamples,
+  listIssues,
+  updateIssueStatus,
+  type Issue,
+  type IssueEvent,
+  type IssueStatus,
+} from "./db/issues";
 
 export {
   createApiKey,

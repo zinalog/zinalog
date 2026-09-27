@@ -1,5 +1,6 @@
 import { getAllSettings } from "./db";
 import { sendEmail, getEmailConfig, buildAlertEmail } from "./email";
+import { alertHeadline, type AlertReason } from "./alert-format";
 
 export interface AlertLog {
   level: string;
@@ -8,6 +9,9 @@ export interface AlertLog {
   stack: string | null;
   metadata: string | null;
   created_at: string;
+  /** Set when the alert is for a new or regressed issue, not a threshold. */
+  alert_reason?: AlertReason | null;
+  issue_id?: number | null;
 }
 
 const LEVEL_COLORS: Record<string, number> = {
@@ -36,7 +40,7 @@ export async function sendTelegram(
   const service = log.service ?? "unknown";
   const emoji = LEVEL_EMOJI[log.level] ?? "⚪";
   const msg = [
-    `${emoji} *\\[${escTg(log.level.toUpperCase())}\\]* \\- ${escTg(log.message)}`,
+    `${emoji} *\\[${escTg(log.level.toUpperCase())}\\]* \\- ${escTg(alertHeadline(log))}`,
     `📦 *Service:* \`${escTgCode(service)}\``,
     `🕐 \`${escTgCode(log.created_at)}\``,
     log.stack
@@ -103,7 +107,7 @@ export async function sendSlack(
             type: "section",
             text: {
               type: "mrkdwn",
-              text: `${emoji} *${log.level.toUpperCase()}* - ${log.message}`,
+              text: `${emoji} *${log.level.toUpperCase()}* - ${alertHeadline(log)}`,
             },
           },
           {
@@ -164,7 +168,7 @@ export async function sendDiscord(
   const color = LEVEL_COLORS[log.level] ?? 0x8b949e;
 
   const embed: Record<string, unknown> = {
-    title: `${LEVEL_EMOJI[log.level] ?? "⚪"} ${log.level.toUpperCase()}: ${log.message.slice(0, 200)}`,
+    title: `${LEVEL_EMOJI[log.level] ?? "⚪"} ${log.level.toUpperCase()}: ${alertHeadline(log).slice(0, 200)}`,
     color,
     fields: [
       { name: "Service", value: `\`${service}\``, inline: true },
@@ -243,6 +247,8 @@ export async function sendWebhook(
         })()
       : null,
     created_at: log.created_at,
+    alert_reason: log.alert_reason ?? null,
+    issue_id: log.issue_id ?? null,
     source: "zinalog",
   };
 
