@@ -22,6 +22,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   turbopack: {},
+  images: {
+    qualities: [75, 95],
+  },
   async headers() {
     return [
       {
