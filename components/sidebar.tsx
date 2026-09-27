@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   LayoutDashboard,
   ScrollText,
@@ -72,6 +72,30 @@ function EncryptionWarning() {
   );
 }
 
+type NavSection = "logs" | "admin";
+
+// Animates height via grid rows (0fr <-> 1fr), which transitions to the
+// content's natural height without measuring it. Closed content stays
+// mounted but inert, so its links drop out of the tab order.
+function Collapsible({
+  open,
+  children,
+}: {
+  open: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      inert={!open}
+      className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out motion-reduce:transition-none ${
+        open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+      }`}
+    >
+      <div className="overflow-hidden min-h-0">{children}</div>
+    </div>
+  );
+}
+
 function NavLinks({
   onNavigate,
   currentUser,
@@ -114,10 +138,27 @@ function NavLinks({
     pathname.startsWith("/dashboard/issues");
   const adminActive =
     canSeeAdministrative && adminItems.some(({ href }) => isActive(href));
-  const [logsPinnedOpen, setLogsPinnedOpen] = useState(false);
-  const [adminPinnedOpen, setAdminPinnedOpen] = useState(false);
-  const logsOpen = logsActive || logsPinnedOpen;
-  const adminOpen = adminActive || adminPinnedOpen;
+  // Accordion: at most one section is open. It defaults to the section
+  // holding the current page, and a manual toggle only lasts until the next
+  // navigation (same path-keyed pattern as the mobile drawer).
+  const activeSection: NavSection | null = logsActive
+    ? "logs"
+    : adminActive
+      ? "admin"
+      : null;
+  const [toggled, setToggled] = useState<{
+    path: string;
+    section: NavSection | null;
+  } | null>(null);
+  const openSection =
+    toggled?.path === pathname ? toggled.section : activeSection;
+  const toggleSection = (section: NavSection) =>
+    setToggled({
+      path: pathname,
+      section: openSection === section ? null : section,
+    });
+  const logsOpen = openSection === "logs";
+  const adminOpen = openSection === "admin";
 
   return (
     <nav className="flex-1 px-2.5 py-3">
@@ -142,11 +183,8 @@ function NavLinks({
 
       {/* Logs collapsible section */}
       <button
-        onClick={() => {
-          if (!logsActive) {
-            setLogsPinnedOpen((open) => !open);
-          }
-        }}
+        onClick={() => toggleSection("logs")}
+        aria-expanded={logsOpen}
         className={`flex items-center gap-2.5 px-3 py-2.5 rounded-md mb-0.5 w-full border-none cursor-pointer text-[13px] text-left transition-all duration-150 ${
           logsActive
             ? "font-semibold text-(--accent) bg-[rgba(88,166,255,0.1)]"
@@ -161,7 +199,7 @@ function NavLinks({
         />
       </button>
 
-      {logsOpen && (
+      <Collapsible open={logsOpen}>
         <div className="pl-3.5 mb-0.5">
           <Link
             href="/dashboard/logs"
@@ -201,7 +239,7 @@ function NavLinks({
             );
           })}
         </div>
-      )}
+      </Collapsible>
 
       {secondaryNavItems.map(({ href, label, icon: Icon }) => {
         const active = isActive(href);
@@ -224,11 +262,8 @@ function NavLinks({
       {canSeeAdministrative && (
         <>
           <button
-            onClick={() => {
-              if (!adminActive) {
-                setAdminPinnedOpen((open) => !open);
-              }
-            }}
+            onClick={() => toggleSection("admin")}
+            aria-expanded={adminOpen}
             className={`flex items-center gap-2.5 px-3 py-2.5 rounded-md mb-0.5 w-full border-none cursor-pointer text-[13px] text-left transition-all duration-150 ${
               adminActive
                 ? "font-semibold text-(--accent) bg-[rgba(88,166,255,0.1)]"
@@ -243,7 +278,7 @@ function NavLinks({
             />
           </button>
 
-          {adminOpen && (
+          <Collapsible open={adminOpen}>
             <div className="pl-3.5 mb-0.5">
               {adminItems.map(({ href, label, icon: Icon }) => {
                 const active = pathname === href;
@@ -264,7 +299,7 @@ function NavLinks({
                 );
               })}
             </div>
-          )}
+          </Collapsible>
         </>
       )}
     </nav>
