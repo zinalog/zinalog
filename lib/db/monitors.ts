@@ -397,6 +397,21 @@ export async function listRecentChecksAcrossMonitors(
   )) as RecentMonitorCheck[];
 }
 
+export async function deleteOldMonitorChecks(days: number): Promise<number> {
+  const safeDays = Math.floor(days);
+  if (!Number.isFinite(safeDays) || safeDays < 0) {
+    throw new Error(`Invalid days value: ${days}`);
+  }
+
+  const database = await getDb();
+  const result = await database.run(
+    "DELETE FROM monitor_checks WHERE checked_at < datetime('now', '-' || ? || ' days')",
+    [safeDays]
+  );
+
+  return result.changes ?? 0;
+}
+
 export async function getMonitorUptimeStats(
   monitorId: number,
   hours = 24

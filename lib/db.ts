@@ -46,6 +46,7 @@ export {
 export {
   getAccessAuditRetentionDays,
   getAllSettings,
+  getRetentionDays,
   getSessionIdleTimeoutMinutes,
   getSetting,
   isAccessAuditEnabled,
@@ -92,6 +93,7 @@ export {
 export {
   createMonitor,
   deleteMonitor,
+  deleteOldMonitorChecks,
   getDueMonitors,
   getMonitorById,
   getMonitorsDueForDomainRefresh,

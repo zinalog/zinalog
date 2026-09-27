@@ -478,6 +478,53 @@ test("groups logs, counts recent activity, and deletes retained logs", async (t)
   );
 });
 
+test("deletes monitor checks older than the retention window", async (t) => {
+  const {
+    tempDir,
+    dbModule,
+    previousNodeEnv,
+    previousDatabasePath,
+    previousEncryptionKey,
+  } = await loadDbModule();
+  t.after(async () =>
+    closeAndCleanup(
+      tempDir,
+      dbModule,
+      previousNodeEnv,
+      previousDatabasePath,
+      previousEncryptionKey
+    )
+  );
+
+  const monitor = await dbModule.createMonitor({
+    name: "api",
+    type: "http",
+    target: "https://example.com",
+  });
+  await dbModule.recordMonitorCheck(monitor, {
+    status: "up",
+    status_code: 200,
+    response_time_ms: 50,
+    error: null,
+  });
+
+  const database = await dbModule.getDb();
+  const oldResult = await database.run(
+    `INSERT INTO monitor_checks (monitor_id, status, status_code, response_time_ms, error, checked_at)
+     VALUES (?, 'down', 500, 100, 'old', datetime('now', '-8 days'))`,
+    [monitor.id]
+  );
+
+  assert.equal(await dbModule.deleteOldMonitorChecks(7), 1);
+
+  const remainingChecks = await dbModule.listMonitorChecks(monitor.id);
+  assert.equal(remainingChecks.length, 1);
+  assert.equal(
+    remainingChecks.some((check) => check.id === oldResult.lastID),
+    false
+  );
+});
+
 test("applies settings fallbacks and cleans up auth records", async (t) => {
   const {
     tempDir,

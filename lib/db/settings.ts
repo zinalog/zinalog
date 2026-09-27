@@ -87,6 +87,10 @@ export async function getSessionIdleTimeoutMinutes(): Promise<number> {
   return parsePositiveSetting("session_idle_timeout_minutes", 30);
 }
 
+export async function getRetentionDays(): Promise<number> {
+  return parsePositiveSetting("retention_days", 30);
+}
+
 export async function getAccessAuditRetentionDays(): Promise<number> {
   return parsePositiveSetting("access_audit_retention_days", 30);
 }
