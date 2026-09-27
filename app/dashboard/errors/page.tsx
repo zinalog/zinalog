@@ -21,7 +21,8 @@ export default async function ErrorsPage() {
       <div>
         <h1 className="text-[22px] font-bold mb-1">Error Groups</h1>
         <p className="text-[13px] text-(--text-muted)">
-          Similar errors grouped by message and service
+          Similar errors grouped together, ignoring ids, numbers and other
+          values that vary
         </p>
       </div>
 
@@ -59,9 +60,9 @@ export default async function ErrorsPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {groups.map((group, i) => (
+          {groups.map((group) => (
             <div
-              key={i}
+              key={group.fingerprint}
               className="bg-(--bg-card) border border-(--border) border-l-[3px] border-l-(--error) rounded-lg px-4.5 py-4 flex flex-col gap-2.5 transition-colors"
             >
               {/* Top row */}

@@ -9,6 +9,7 @@ import {
 } from "@/lib/db";
 import { sendAllNotifications } from "@/lib/notifications";
 import { requireApiUser } from "@/lib/session-auth";
+import { MAX_CLIENT_FINGERPRINT_LENGTH } from "@/lib/fingerprint";
 
 const VALID_LEVELS = ["info", "warning", "error", "debug"];
 
@@ -89,12 +90,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { level, message, service, stack, metadata } = body as {
+  const { level, message, service, stack, metadata, fingerprint } = body as {
     level?: string;
     message?: string;
     service?: string;
     stack?: string;
     metadata?: unknown;
+    fingerprint?: unknown;
   };
 
   if (!message || typeof message !== "string") {
@@ -133,6 +135,23 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Optional client override for grouping; hashed with level and service
+  // before storage, so it only groups logs within the same service.
+  if (
+    fingerprint !== undefined &&
+    fingerprint !== null &&
+    (typeof fingerprint !== "string" ||
+      fingerprint.trim() === "" ||
+      fingerprint.length > MAX_CLIENT_FINGERPRINT_LENGTH)
+  ) {
+    return NextResponse.json(
+      {
+        error: `Field 'fingerprint' must be a non-empty string of at most ${MAX_CLIENT_FINGERPRINT_LENGTH} characters`,
+      },
+      { status: 400, headers: CORS_HEADERS }
+    );
+  }
+
   const metadataJson = metadata !== undefined ? JSON.stringify(metadata) : null;
   if (metadataJson && exceedsByteLength(metadataJson, MAX_METADATA_BYTES)) {
     return NextResponse.json(
@@ -162,6 +181,7 @@ export async function POST(req: NextRequest) {
     stack: typeof stack === "string" ? stack : null,
     metadata: metadataJson,
     api_key_id: auth.apiKey?.id ?? null,
+    fingerprint: typeof fingerprint === "string" ? fingerprint.trim() : null,
   });
 
   // Fire-and-forget alert check

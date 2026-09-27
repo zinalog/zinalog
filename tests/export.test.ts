@@ -12,6 +12,7 @@ test("toCSV neutralizes formula-like cells", () => {
       stack: "@SUM(1,1)",
       metadata: "-cmd",
       api_key_id: null,
+      fingerprint: null,
       created_at: "2026-04-02T12:00:00.000Z",
     },
   ]);
@@ -36,6 +37,7 @@ test("toCSV returns headers for empty exports and escapes quotes", () => {
       stack: null,
       metadata: null,
       api_key_id: null,
+      fingerprint: null,
       created_at: "2026-04-02T12:00:00.000Z",
     },
   ]);

@@ -42,7 +42,8 @@ export default async function LogGroupPage({
       <div>
         <h1 className="text-[22px] font-bold mb-1">{label} Logs</h1>
         <p className="text-[13px] text-(--text-muted)">
-          Grouped similar {label.toLowerCase()} logs by message and service
+          Similar {label.toLowerCase()} logs grouped together, ignoring ids,
+          numbers and other values that vary
         </p>
       </div>
 
@@ -80,9 +81,9 @@ export default async function LogGroupPage({
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {groups.map((group, i) => (
+          {groups.map((group) => (
             <div
-              key={i}
+              key={group.fingerprint}
               className="bg-(--bg-card) border border-(--border) rounded-lg px-4.5 py-4 flex flex-col gap-2.5"
               style={{ borderLeft: `3px solid ${color}` }}
             >
