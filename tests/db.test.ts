@@ -16,6 +16,7 @@ const compiledDbSubmodulePaths = [
   "users",
   "monitors",
   "issues",
+  "announcements",
 ].map((name) => path.resolve(__dirname, `../lib/db/${name}.js`));
 const cjsRequire = createRequire(__filename);
 
@@ -1088,4 +1089,52 @@ test("issues migration seeds issues from already-fingerprinted logs", async (t) 
     })),
     [{ title: "Order 2 stuck", count: 2, status: "open" }]
   );
+});
+
+test("records announcement dismissals per user and removes them with the user", async (t) => {
+  const {
+    tempDir,
+    dbModule,
+    previousNodeEnv,
+    previousDatabasePath,
+    previousEncryptionKey,
+  } = await loadDbModule();
+  t.after(async () =>
+    closeAndCleanup(
+      tempDir,
+      dbModule,
+      previousNodeEnv,
+      previousDatabasePath,
+      previousEncryptionKey
+    )
+  );
+
+  const alice = await dbModule.createUser({
+    username: "alice",
+    password_hash: "hashed-password",
+    role: "admin",
+  });
+  const bob = await dbModule.createUser({
+    username: "bob",
+    password_hash: "hashed-password",
+    role: "viewer",
+  });
+
+  await dbModule.dismissAnnouncement(alice.id, "2026-09-27-maintenance");
+  // Dismissing twice (e.g. from two browsers) is a no-op, not an error.
+  await dbModule.dismissAnnouncement(alice.id, "2026-09-27-maintenance");
+  await dbModule.dismissAnnouncement(alice.id, "release-0.3.0");
+
+  assert.deepEqual(
+    [...(await dbModule.listDismissedAnnouncementIds(alice.id))].sort(),
+    ["2026-09-27-maintenance", "release-0.3.0"]
+  );
+  assert.equal((await dbModule.listDismissedAnnouncementIds(bob.id)).size, 0);
+
+  await dbModule.deleteUser(alice.id);
+  const db = await dbModule.getDb();
+  const remaining = await db.get<{ c: number }>(
+    "SELECT COUNT(*) AS c FROM announcement_dismissals"
+  );
+  assert.equal(remaining?.c, 0);
 });

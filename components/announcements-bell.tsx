@@ -15,7 +15,6 @@ import type { Announcement, AnnouncementType } from "@/lib/announcements";
 
 const POLL_INTERVAL_MS = 30 * 60 * 1000;
 const SEEN_KEY = "zinalog:announcements:seen";
-const DISMISSED_KEY = "zinalog:announcements:dismissed";
 
 const TYPE_STYLES: Record<
   AnnouncementType,
@@ -28,7 +27,8 @@ const TYPE_STYLES: Record<
   release: { color: "var(--success)", icon: ArrowUpCircle },
 };
 
-// Seen/dismissed state is a per-browser convenience, so storage failures
+// Dismissals are stored per user on the server. Seen state (which only
+// drives the unread dot) is a per-browser convenience, so storage failures
 // (private mode, blocked site data) just mean everything shows as new.
 function readIds(key: string): Set<string> {
   try {
@@ -74,7 +74,6 @@ export default function AnnouncementsBell() {
         .then((data: { announcements?: Announcement[] } | null) => {
           if (cancelled || !data) return;
           setSeen(readIds(SEEN_KEY));
-          setDismissed(readIds(DISMISSED_KEY));
           setAnnouncements(data.announcements ?? []);
         })
         // Announcements are optional; never surface fetch errors.
@@ -104,11 +103,9 @@ export default function AnnouncementsBell() {
     };
   }, [open]);
 
-  // Non-dismissible announcements always show, even if an older build
-  // stored their id as dismissed.
-  const visible = announcements.filter(
-    (a) => !a.dismissible || !dismissed.has(a.id)
-  );
+  // The server already leaves out dismissed announcements; this hides one
+  // immediately while its dismissal is saved, before the next reload.
+  const visible = announcements.filter((a) => !dismissed.has(a.id));
   const unreadCount = visible.filter((a) => !seen.has(a.id)).length;
 
   const toggle = () => {
@@ -123,9 +120,23 @@ export default function AnnouncementsBell() {
   };
 
   const dismiss = (id: string) => {
-    const updated = new Set(dismissed).add(id);
-    setDismissed(updated);
-    writeIds(DISMISSED_KEY, updated);
+    setDismissed((prev) => new Set(prev).add(id));
+    const restore = () =>
+      setDismissed((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    fetch("/api/announcements/dismiss", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    })
+      .then((res) => {
+        // 404 means it's no longer in the feed, so it stays hidden anyway.
+        if (!res.ok && res.status !== 404) restore();
+      })
+      .catch(restore);
   };
 
   return (

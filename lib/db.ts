@@ -7,6 +7,7 @@
 //   ./db/settings application settings (incl. encrypted secrets)
 //   ./db/users    users, sessions, auth challenges, audit logs
 //   ./db/monitors uptime monitor CRUD, checks, uptime stats
+//   ./db/announcements per-user dismissals of remote announcements
 export {
   getDb,
   waitForLogBackfill,
@@ -135,3 +136,8 @@ export {
   type MonitorType,
   type RecentMonitorCheck,
 } from "./db/monitors";
+
+export {
+  dismissAnnouncement,
+  listDismissedAnnouncementIds,
+} from "./db/announcements";
