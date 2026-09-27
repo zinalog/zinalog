@@ -740,3 +740,79 @@ test("encrypts sensitive settings at rest and decrypts on read", async (t) => {
   ))!;
   assert.equal(rawEmpty.value, "");
 });
+
+test("groups logs by fingerprint and backfills rows missing one", async (t) => {
+  const {
+    tempDir,
+    dbModule,
+    previousNodeEnv,
+    previousDatabasePath,
+    previousEncryptionKey,
+  } = await loadDbModule();
+  let currentDbModule = dbModule;
+  t.after(async () =>
+    closeAndCleanup(
+      tempDir,
+      currentDbModule,
+      previousNodeEnv,
+      previousDatabasePath,
+      previousEncryptionKey
+    )
+  );
+
+  await dbModule.insertLog({
+    level: "error",
+    message: "User 1 not found",
+    service: "api",
+  });
+  const latestId = await dbModule.insertLog({
+    level: "error",
+    message: "User 2 not found",
+    service: "api",
+  });
+  await dbModule.insertLog({
+    level: "error",
+    message: "totally different",
+    service: "api",
+    fingerprint: "custom",
+  });
+  await dbModule.insertLog({
+    level: "error",
+    message: "also different",
+    service: "api",
+    fingerprint: "custom",
+  });
+
+  const groups = await dbModule.getErrorGroups();
+  assert.deepEqual(
+    groups.map((group) => ({ message: group.message, count: group.count })),
+    [
+      { message: "also different", count: 2 },
+      { message: "User 2 not found", count: 2 },
+    ]
+  );
+  assert.equal(groups[1].latest_id, latestId);
+
+  // Simulate rows written before the fingerprint column existed, then reopen
+  // the database so startup backfills them.
+  const db = await dbModule.getDb();
+  await db.run("UPDATE logs SET fingerprint = NULL");
+  await db.close();
+  delete global.__dbPromise;
+  clearDbModuleCache();
+  currentDbModule = cjsRequire(compiledDbModulePath) as DbModule;
+
+  const reopened = await currentDbModule.getDb();
+  const missing = (await reopened.get<{ c: number }>(
+    "SELECT COUNT(*) as c FROM logs WHERE fingerprint IS NULL"
+  ))!;
+  assert.equal(missing.c, 0);
+
+  // Backfilled rows can't know the original client fingerprint, so the two
+  // "custom" rows fall back to automatic grouping.
+  const backfilled = await currentDbModule.getErrorGroups();
+  assert.deepEqual(
+    backfilled.map((group) => group.count),
+    [2, 1, 1]
+  );
+});

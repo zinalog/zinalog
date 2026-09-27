@@ -7,6 +7,7 @@ import {
 } from "./core";
 import { getSettingFromDb } from "./settings";
 import { emitNewLog } from "../log-events";
+import { computeFingerprint } from "../fingerprint";
 
 async function getMaxLogsLimitFromDb(
   database: SqliteDatabase
@@ -101,13 +102,14 @@ export async function insertLog(data: {
   stack?: string | null;
   metadata?: string | null;
   api_key_id?: number | null;
+  fingerprint?: string | null;
 }): Promise<number> {
   const database = await getDb();
   const maxLogs = await getMaxLogsLimitFromDb(database);
 
   const result = await database.run(
-    `INSERT INTO logs (level, message, service, stack, metadata, api_key_id)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO logs (level, message, service, stack, metadata, api_key_id, fingerprint)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       data.level,
       data.message,
@@ -115,6 +117,13 @@ export async function insertLog(data: {
       data.stack ?? null,
       data.metadata ?? null,
       data.api_key_id ?? null,
+      computeFingerprint({
+        level: data.level,
+        message: data.message,
+        service: data.service,
+        stack: data.stack,
+        clientFingerprint: data.fingerprint,
+      }),
     ]
   );
 
@@ -269,63 +278,52 @@ export async function getServices(
   return rows.map((row) => row.service);
 }
 
+export interface LogGroup {
+  fingerprint: string;
+  message: string;
+  service: string | null;
+  level: string;
+  count: number;
+  last_seen: string;
+  first_seen: string;
+  latest_id: number;
+}
+
+// Groups by fingerprint (level and service are part of it), labelling each
+// group with its most recent message.
 export async function getLogGroups(
   level: string,
   allowedServices: string[] | null = null
-) {
+): Promise<LogGroup[]> {
   const database = await getDb();
   const conditions = ["level = ?"];
   const params: unknown[] = [level];
   addAllowedServicesCondition(conditions, params, allowedServices);
   return (await database.all(
-    `SELECT message, service, level,
-            COUNT(*) as count,
-            MAX(created_at) as last_seen,
-            MIN(created_at) as first_seen,
-            MAX(id) as latest_id
-     FROM logs
-     WHERE ${conditions.join(" AND ")}
-     GROUP BY message, service
-     ORDER BY count DESC
-     LIMIT 100`,
+    `SELECT g.fingerprint, l.message, l.service, l.level,
+            g.count, g.last_seen, g.first_seen, g.latest_id
+     FROM (
+       SELECT fingerprint,
+              COUNT(*) as count,
+              MAX(created_at) as last_seen,
+              MIN(created_at) as first_seen,
+              MAX(id) as latest_id
+       FROM logs
+       WHERE ${conditions.join(" AND ")}
+       GROUP BY fingerprint
+       ORDER BY count DESC
+       LIMIT 100
+     ) g
+     JOIN logs l ON l.id = g.latest_id
+     ORDER BY g.count DESC, g.latest_id DESC`,
     params
-  )) as {
-    message: string;
-    service: string | null;
-    level: string;
-    count: number;
-    last_seen: string;
-    first_seen: string;
-    latest_id: number;
-  }[];
+  )) as LogGroup[];
 }
 
-export async function getErrorGroups(allowedServices: string[] | null = null) {
-  const database = await getDb();
-  const conditions = ["level = 'error'"];
-  const params: unknown[] = [];
-  addAllowedServicesCondition(conditions, params, allowedServices);
-  return (await database.all(
-    `SELECT message, service, level,
-            COUNT(*) as count,
-            MAX(created_at) as last_seen,
-            MIN(created_at) as first_seen,
-            MAX(id) as latest_id
-     FROM logs
-     WHERE ${conditions.join(" AND ")}
-     GROUP BY message, service
-     ORDER BY count DESC
-     LIMIT 100`,
-    params
-  )) as {
-    message: string;
-    service: string | null;
-    level: string;
-    count: number;
-    last_seen: string;
-    first_seen: string;
-    latest_id: number;
-  }[];
+export async function getErrorGroups(
+  allowedServices: string[] | null = null
+): Promise<LogGroup[]> {
+  return getLogGroups("error", allowedServices);
 }
 
 export async function checkAndSetCooldown(

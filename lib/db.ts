@@ -32,6 +32,7 @@ export {
   insertLog,
   queryLogs,
   trimLogsToMax,
+  type LogGroup,
 } from "./db/logs";
 
 export {

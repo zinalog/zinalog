@@ -4,6 +4,7 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "crypto";
 import sqlite3 from "sqlite3";
 import { open, type Database as SqliteDatabase } from "sqlite";
 import { runPendingMigrations } from "../migrations";
+import { computeFingerprint } from "../fingerprint";
 
 export type { SqliteDatabase };
 
@@ -194,6 +195,48 @@ async function migrateUsersTable(database: SqliteDatabase): Promise<void> {
   `);
 }
 
+// Rows written before the fingerprint column existed (or restored from an
+// older backup) have no fingerprint. Fingerprints are computed in JS, so this
+// can't live in a SQL migration; it's a cheap no-op once every row is filled.
+async function backfillLogFingerprints(
+  database: SqliteDatabase
+): Promise<void> {
+  const BATCH_SIZE = 1000;
+
+  for (;;) {
+    const rows = (await database.all(
+      `SELECT id, level, message, service, stack
+       FROM logs
+       WHERE fingerprint IS NULL
+       LIMIT ?`,
+      [BATCH_SIZE]
+    )) as Array<{
+      id: number;
+      level: string;
+      message: string;
+      service: string | null;
+      stack: string | null;
+    }>;
+    if (rows.length === 0) return;
+
+    await database.exec("BEGIN IMMEDIATE");
+    try {
+      for (const row of rows) {
+        await database.run("UPDATE logs SET fingerprint = ? WHERE id = ?", [
+          computeFingerprint(row),
+          row.id,
+        ]);
+      }
+      await database.exec("COMMIT");
+    } catch (error) {
+      await database.exec("ROLLBACK");
+      throw error;
+    }
+
+    if (rows.length < BATCH_SIZE) return;
+  }
+}
+
 async function createDb(): Promise<SqliteDatabase> {
   const database = await open({
     filename: DB_PATH,
@@ -305,6 +348,7 @@ async function createDb(): Promise<SqliteDatabase> {
   await migrateApiKeysTable(database);
   await migrateUsersTable(database);
   await runPendingMigrations(database);
+  await backfillLogFingerprints(database);
 
   const defaults: Array<[string, string]> = [
     ["retention_days", "30"],
@@ -365,6 +409,7 @@ export interface Log {
   stack: string | null;
   metadata: string | null;
   api_key_id: number | null;
+  fingerprint: string | null;
   created_at: string;
 }
 
