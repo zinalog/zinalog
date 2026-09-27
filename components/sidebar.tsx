@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { APP_VERSION_LABEL } from "@/lib/version";
 import type { SessionUser } from "@/lib/session-auth";
+import AnnouncementsBell from "@/components/announcements-bell";
 
 const navItems = [
   { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
@@ -367,8 +368,8 @@ export default function Sidebar({
     <>
       {/*  Desktop sidebar  */}
       <aside className="sidebar-wrap w-55 min-h-screen bg-(--bg-surface) border-r border-(--border) flex flex-col fixed top-0 left-0 bottom-0 z-40">
-        <div className="px-5 pt-5 pb-4 border-b border-(--border)">
-          <Link href="/dashboard" className="no-underline">
+        <div className="relative px-5 pt-5 pb-4 border-b border-(--border) flex items-center gap-2">
+          <Link href="/dashboard" className="no-underline flex-1 min-w-0">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-[#209CEE] flex items-center justify-center">
                 <Image src="/logo.png" alt="ZinaLog" width={20} height={20} />
@@ -383,6 +384,7 @@ export default function Sidebar({
               </div>
             </div>
           </Link>
+          <AnnouncementsBell />
         </div>
 
         <div className="px-5 py-2.5 border-b border-(--border)">
@@ -463,7 +465,7 @@ export default function Sidebar({
       {drawerOpen && (
         <div className="fixed top-0 left-0 bottom-0 z-60 w-65 flex flex-col bg-(--bg-surface) border-r border-(--border) animate-[slideInLeft_0.22s_ease-out]">
           {/* Drawer header */}
-          <div className="px-4 pt-4 pb-3.5 border-b border-(--border) flex items-center gap-2.5">
+          <div className="relative px-4 pt-4 pb-3.5 border-b border-(--border) flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[#209CEE] flex items-center justify-center">
               <Image src="/logo.png" alt="ZinaLog" width={20} height={20} />
             </div>
@@ -475,6 +477,7 @@ export default function Sidebar({
                 App Logs v{APP_VERSION_LABEL}
               </div>
             </div>
+            <AnnouncementsBell />
             <button
               onClick={() => setDrawerPath(null)}
               className="bg-transparent border-none cursor-pointer text-(--text-dim) p-1 rounded-md flex"
