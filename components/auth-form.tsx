@@ -181,7 +181,7 @@ export default function AuthForm({ mode }: { mode: "login" | "setup" }) {
               </div>
             </div>
 
-            <div className="mt-8 space-y-3">
+            <div className="mt-8 grid grid-cols-2 gap-3">
               {landingFeatures.map((feature) => (
                 <div
                   key={feature}
