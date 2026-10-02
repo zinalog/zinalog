@@ -1,6 +1,6 @@
 services:
   zinalog:
-    image: ghcr.io/iamceeso/zinalog:latest
+    image: ghcr.io/zinalog/zinalog:latest
     restart: unless-stopped
     ports:
       - "4000:4000"
