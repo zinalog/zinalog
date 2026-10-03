@@ -82,7 +82,8 @@ function parseFrame(line: string): StackFrame | null {
   const v8 = V8_FRAME.exec(line);
   if (v8) {
     fn = v8[1] ?? "";
-    location = v8[2] ?? v8[3] ?? "";
+    // Exactly one alternative matches, and its group is at least "".
+    location = v8[2] ?? v8[3];
   } else {
     const gecko = GECKO_FRAME.exec(line);
     if (!gecko) return null;
@@ -111,8 +112,7 @@ export function extractStackSignature(stack: string): {
 } {
   const lines = stack.split("\n");
   const errorType =
-    /^\s*([A-Za-z_$][\w$.]*(?:Error|Exception))\b/.exec(lines[0] ?? "")?.[1] ??
-    null;
+    /^\s*([A-Za-z_$][\w$.]*(?:Error|Exception))\b/.exec(lines[0])?.[1] ?? null;
 
   const frames = lines
     .map(parseFrame)
