@@ -139,6 +139,9 @@ function LogsContent() {
     return `/api/export?${params}`;
   };
 
+  const exportLinkClass =
+    "flex items-center gap-1.5 bg-(--bg-card) border border-(--border) rounded-md px-3 py-1.75 text-[12px] text-(--text-muted) no-underline whitespace-nowrap";
+
   return (
     <div className="flex flex-col h-[calc(100vh-56px)]">
       <div className="flex justify-between items-start mb-4">
@@ -147,25 +150,6 @@ function LogsContent() {
           <p className="text-[13px] text-(--text-muted)">
             Browse and search all collected logs
           </p>
-        </div>
-
-        <div className="flex gap-2">
-          <a
-            href={exportUrl("csv")}
-            download
-            className="flex items-center gap-1.5 bg-(--bg-card) border border-(--border) rounded-md px-3 py-1.75 text-[12px] text-(--text-muted) no-underline"
-          >
-            <Download size={13} />
-            CSV
-          </a>
-          <a
-            href={exportUrl("json")}
-            download
-            className="flex items-center gap-1.5 bg-(--bg-card) border border-(--border) rounded-md px-3 py-1.75 text-[12px] text-(--text-muted) no-underline"
-          >
-            <Download size={13} />
-            JSON
-          </a>
         </div>
       </div>
 
@@ -182,6 +166,18 @@ function LogsContent() {
           filters={filters}
           services={services}
           loading={loading}
+          actions={
+            <>
+              <a href={exportUrl("csv")} download className={exportLinkClass}>
+                <Download size={13} />
+                CSV
+              </a>
+              <a href={exportUrl("json")} download className={exportLinkClass}>
+                <Download size={13} />
+                JSON
+              </a>
+            </>
+          }
         />
       </div>
     </div>

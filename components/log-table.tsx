@@ -32,6 +32,8 @@ interface LogTableProps {
   };
   services: string[];
   loading?: boolean;
+  // Extra controls (e.g. export buttons) rendered at the end of the filter bar
+  actions?: React.ReactNode;
 }
 
 //  Quick preset helpers
@@ -369,6 +371,7 @@ export default function LogTable({
   filters,
   services,
   loading,
+  actions,
 }: LogTableProps) {
   const [selectedLog, setSelectedLog] = useState<Log | null>(null);
   const totalPages = Math.ceil(total / limit);
@@ -392,8 +395,8 @@ export default function LogTable({
     <div className="flex flex-col h-full min-h-0">
       {/* ── Filter bar ── */}
 
-      <div className="flex gap-2 py-3 flex-wrap items-center shrink-0">
-        <div className="relative flex-1 min-w-50">
+      <div className="flex gap-2 py-3 items-center shrink-0 min-w-0">
+        <div className="relative w-56 min-w-28 shrink">
           <Search
             size={14}
             className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(--text-dim)"
@@ -407,7 +410,7 @@ export default function LogTable({
           />
         </div>
 
-        <Filter size={13} className="text-(--text-dim)" />
+        <Filter size={13} className="text-(--text-dim) shrink-0" />
 
         <DateRangePicker
           key={`${filters.from}|${filters.to}`}
@@ -453,16 +456,20 @@ export default function LogTable({
             onClick={() => {
               onClearFilters();
             }}
-            className="flex items-center gap-1.25 bg-none border border-(--border) rounded-md px-2.5 py-1.5 text-[12px] text-(--text-dim) cursor-pointer"
+            className="flex items-center gap-1.25 bg-none border border-(--border) rounded-md px-2.5 py-1.5 text-[12px] text-(--text-dim) cursor-pointer shrink-0 whitespace-nowrap"
           >
             <X size={12} />
             Clear filters
           </button>
         )}
 
-        <span className="text-[12px] text-(--text-dim) ml-auto">
+        <span className="text-[12px] text-(--text-dim) ml-auto shrink-0 whitespace-nowrap tabular-nums">
           {total.toLocaleString()} log{total !== 1 ? "s" : ""}
         </span>
+
+        {actions && (
+          <div className="flex items-center gap-2 shrink-0">{actions}</div>
+        )}
       </div>
 
       {/* ── Active date range badge ── */}
