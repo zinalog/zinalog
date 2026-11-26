@@ -94,3 +94,26 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ steps.metadata.outputs.image_tag }}
+
+  deploy:
+    needs: docker
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploy-demo
+      cancel-in-progress: false
+
+    steps:
+      - name: Deploy to demo server
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+            cd /home/zinalogdemo
+            docker compose pull
+            docker compose up -d
+            docker image prune -f
